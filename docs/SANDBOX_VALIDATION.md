@@ -38,3 +38,18 @@ Do not share secrets or private key files.
   must be verified before any executor is designed.
 - A trusted separate-process service, tool-side fencing, durable idempotency,
   cgroup limits and a disposable writable workspace are still required.
+
+## Portable host capability check
+
+Use `python3 -c 'from agency.sandbox import sandbox_capabilities; print(sandbox_capabilities())'`
+under the intended **non-root** service account. The report is non-destructive
+and does not enable agent tools. If the host denies namespace creation (for
+example AppArmor's unprivileged user namespace restriction), the backend is
+reported as `disabled` with a machine-readable reason; no `--share-net`, root
+execution, or sysctl relaxation is attempted. A successful fixed probe is
+**not** evidence that arbitrary tool execution is safe.
+
+Portability is a target, not a guarantee: some VPS configurations forbid all
+safe unprivileged isolation mechanisms. Alternative container/worker backends
+must be separately implemented and verified against the same security policy
+before selection. No fallback executor is implemented yet.
