@@ -33,7 +33,7 @@ class CrossUidListenerTests(unittest.TestCase):
             path = directory + "/trusted.sock"
             with open(path, "w") as stream:
                 stream.write("sentinel")
-            with self.assertRaises(FileExistsError):
+            with self.assertRaises(PermissionError):
                 serve_cross_uid_once(
                     path, Mock(), frozenset({os.geteuid() + 1}),
                     os.getegid()
