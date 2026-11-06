@@ -2,12 +2,15 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from agency.systemd_broker import execute_approved
 
 
 class SystemdBrokerTests(unittest.TestCase):
     def setUp(self):
+        self.guard = patch('agency.systemd_broker.verify_private_ledger')
+        self.guard.start()
         self.tmp = tempfile.TemporaryDirectory()
         self.db = str(Path(self.tmp.name) / "broker.sqlite")
         with sqlite3.connect(self.db) as conn:
@@ -16,6 +19,7 @@ class SystemdBrokerTests(unittest.TestCase):
             conn.execute("INSERT INTO approvals(id,job) VALUES (?,?)", ("a" * 32, "noop"))
 
     def tearDown(self):
+        self.guard.stop()
         self.tmp.cleanup()
 
     def test_approved_job_executes_once(self):
