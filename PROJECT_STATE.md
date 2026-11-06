@@ -398,3 +398,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added agency/systemd_acceptance.py: root-operated real transient service verifies non-root UID, /etc/shadow unreadable, /root inaccessible, /usr nonwritable, AF_INET socket denied; all must pass or acceptance fails. Still no claim of full PID/cgroup isolation, and acceptance is not an authorization token.
 - Added agency/trusted_job_admission.py: credential-verified, role-matched, explicit-approval-gated fixed-job admission returning admitted_not_executed; no root execution or new service endpoint. Integration is intentionally partial until an independently provisioned privileged broker and durable authorization/audit protocol exist.
 - Added six tests. VPS regression expected 155; real acceptance test pending. Production trusted service unchanged.
+
+## Experimental persistent systemd broker (2026-11-07)
+- VPS confirmed 155/155 tests, five systemd acceptance checks PASS, trusted service active.
+- Added agency/systemd_broker.py: one-shot Unix peer UID check, strict fixed-job JSON, SQLite BEGIN IMMEDIATE one-time approval consumption before execution, durable started/completed/failed audit entries, systemd fixed-job executor. Five unit tests added; expected 160 tests, VPS validation pending.
+- SECURITY: Prototype only. No root service deployment, no approval issuance API, no agent integration. Ledger filesystem ownership, socket directory trust, durable approval provenance, crash recovery, connection response behavior and bounded service lifecycle require further hardening before production. Do not grant workers sudo or direct broker access.
