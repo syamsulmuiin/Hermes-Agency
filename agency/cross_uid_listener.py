@@ -12,10 +12,16 @@ import stat
 from .cross_uid_policy import verify_cross_uid_transport
 from .trusted_peer import serve_authenticated_peer
 from .trusted_ack import serve_with_ack
+from .private_state import verify_private_state
 
 
-def serve_cross_uid_once(path, boundary, allowed_uids, client_gid, acknowledged=False):
+def serve_cross_uid_once(path, boundary, allowed_uids, client_gid, acknowledged=False, trusted_state=None):
     """Handle one authenticated request; fail closed on mismatched ownership."""
+    if trusted_state is not None:
+        if (not isinstance(trusted_state, tuple) or len(trusted_state) != 3
+            or any(not isinstance(item, (str, os.PathLike)) for item in trusted_state)):
+            raise ValueError("Trusted state must be (directory, database, key_directory)")
+        verify_private_state(*trusted_state)
     if type(acknowledged) is not bool:
         raise ValueError("Invalid acknowledgement mode")
     if not isinstance(path, str) or not path or len(os.fsencode(path)) > 100:
