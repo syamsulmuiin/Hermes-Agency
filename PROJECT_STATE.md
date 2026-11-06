@@ -216,3 +216,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_trusted_service.py for invalid limits and two rejected requests over a real socket. Tests committed; VPS/CI verification pending.
 - LIMITATIONS: This is NOT an indefinitely running daemon, nor a complete cross-UID privilege boundary. It has no response protocol, supervised restart, OS account separation or trusted credential provisioning. No tool execution is enabled. A private 0700 directory currently allows only the owner to connect.
 - Next: test this milestone; design proper separate-user transport and protected key/DB ownership, then implement an authenticated client and controlled lifecycle without weakening directory security.
+
+## Phase 5I.7: Cross-UID transport policy (2026-11-06)
+- User reports Phase 5I.6 tests OK, exact count not provided.
+- Added agency/cross_uid_policy.py to validate pre-provisioned group-traversable (0710) Unix socket directory and group-writable (0660) socket ownership/modes, without changing permissions or privilege.
+- Added tests/test_cross_uid_policy.py for denial of private directories, wrong groups and non-socket paths. New tests are committed but not yet verified on VPS.
+- IMPORTANT: This is a policy validator, NOT cross-UID communication. Existing listeners still require owner-only 0700 directory and socket 0600; no cross-UID listener is wired yet. A dedicated client group, distinct OS users, separate private key/database directories, and real cross-user tests are required before activation. Do not use a shared group for secrets.
+- Next: design an explicit cross-UID listener using a dedicated socket transport directory, keep key/DB directories 0700 server-only, and verify SO_PEERCRED + worker tokens with separate OS identities.
