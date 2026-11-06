@@ -30,14 +30,14 @@ class SecurityTests(unittest.TestCase):
  def test_expiry_and_denial(self):
   a=self.s.request_approval(self.t,'deploy',{},'developer',ttl=2)
   self.now[0]+=3
-  with self.assertRaises(PermissionError):self.s.decide(a,'human',True)
+  with self.assertRaises(PermissionError):self.auth.decide(a,self.auth.issue_credential('human','approver'),True)
   b=self.s.request_approval(self.t,'deploy',{},'developer')
   self.auth.decide(b,self.auth.issue_credential('human','approver'),False)
   with self.assertRaises(PermissionError):self.auth.grant(b,self.t,'deploy',{},self.auth.issue_credential('worker','worker'),'bad','id3')
  def test_restart(self):
   a=self.s.request_approval(self.t,'deploy',{},'developer')
   self.s.close();self.s=SecureAgencyStore(Path(self.tmp.name)/'state.db',clock=lambda:self.now[0]);self.auth=TrustedApprovalService(self.s,b'x'*32,clock=lambda:self.now[0])
-  self.s.decide(a,'human',True);self.assertTrue(self.s.consume(a,self.t,'deploy',{}))
+  self.auth.decide(a,self.auth.issue_credential('human','approver'),True);lease=self.s.claim(self.t,'worker');self.assertTrue(self.auth.grant(a,self.t,'deploy',{},self.auth.issue_credential('worker','worker'),lease,'restart'))
  def test_active_handoff_rejected(self):
   self.s.claim(self.t,'worker')
   with self.assertRaises(PermissionError):self.s.handoff(self.t,'developer','qa',{'completed':[],'output':[],'notes':[],'blockers':[]})
