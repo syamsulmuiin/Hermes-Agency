@@ -382,3 +382,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added agency/sandbox_validation.py to attempt only existing fixed rootless namespace and bubblewrap probes, with bounded timeout, safe failure reasons, and fail-closed agent execution. Systemd/Podman/Docker remain explicitly unimplemented; no generic tool execution or privileged daemon probing.
 - Added five tests covering timeout validation, successful probes not granting tool execution, safe failure classification, root refusal and invalid report.
 - Pending: VPS regression (expected 137 tests), real non-root probe, AppArmor-compatible isolation backend, stronger attestations and resource/network/process isolation before tools can be enabled. No production deployment performed.
+
+## Fixed-job isolated process executor (2026-11-07)
+- Added agency/isolated_jobs.py: executes two fixed built-in jobs (noop, identity) as actual subprocesses under bubblewrap with namespace isolation, read-only /usr, no host shell, cleared environment, rlimits, timeout and bounded stdout. Any backend failure denies execution; no host fallback.
+- Added six regression tests for allowlist, root/timeout rejection, missing backend, isolated invocation and failed backend. VPS verification pending (expected 143 tests).
+- IMPORTANT: current VPS previously failed bubblewrap probe, so actual execution is expected to fail closed until an approved backend works. This does NOT implement general agent tool execution, seccomp, cgroups or complete resource confinement. No production runtime deployment.
