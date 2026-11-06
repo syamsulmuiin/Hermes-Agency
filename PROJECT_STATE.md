@@ -326,3 +326,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Tests cover valid worker stage acceptance, workflow persistence across closing/reopening the SQLite store, denial of wrong agent identity, denial of forged credential, and denial of approver-role credential. Denied stages must not advance workflow or create handoffs.
 - This is an in-process integration suite, not yet a live cross-UID Unix socket positive test or systemd restart test. GitHub CI/VPS test execution pending. Live service database and signing key are untouched.
 - Next gate: run tests; design operator-only credential provisioning and a live cross-UID test with a dedicated test workflow and no credential leakage or tool execution.
+
+## VPS positive integration verification (2026-11-07)
+- Operator pulled commit e73dc7c on VPS and ran tests.test_positive_trusted_workflow: 3/3 tests passed.
+- Full suite: 113 tests passed in 1.500 seconds; hermes-agency.service remained active.
+- Verified isolated trusted-issued worker credential, positive stage progression, SQLite close/reopen continuity, wrong identity/forged credential/approver-role denial. This does not yet prove positive cross-UID socket operation or systemd restart recovery.
+- Next acceptance: operator-controlled credential issuance outside worker, live socket positive test on dedicated test workflow, and restart persistence; no agent tools or production autonomy implied.
