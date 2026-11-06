@@ -109,6 +109,14 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - SECURITY GATES STILL OPEN: runtime authorization is in-process, keyring persistence and rotation are administrator-managed, no authenticated remote service, no tool-side fencing or crash-safe idempotency, no resource-limit proof or isolated writable workspace. No external agent tools are enabled.
 - Next: verify latest CI logs, test bubblewrap probe on the target Linux host, harden sandbox resource controls, implement trusted service boundary and tool-side fencing before any real tool execution.
 
+## Phase 5G: Sandbox hardening and host validation (2026-11-06)
+- Prior GitHub Actions run 42200171405, job 127833207663, independently verified successful: 42/42 unittest tests passed. This run predates Phase 5G commits.
+- Updated agency/sandbox.py with conservative process rlimits, fixed /bin/true probe, empty environment, timeout and fail-closed behavior. No agent-selected commands.
+- Extended tests/test_sandbox.py to assert rlimit hook and empty environment.
+- Added docs/SANDBOX_VALIDATION.md with non-root Linux VPS procedure; updated README.md and docs/SECURITY_BOUNDARIES.md.
+- Phase 5G CI and actual VPS isolation are NOT YET VERIFIED. Request latest run and host output before claiming completion.
+- No real tool execution. Outstanding: trusted process separation, OS-specific namespace verification, cgroup limits, tool-side fencing and crash-safe idempotency.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
