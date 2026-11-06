@@ -69,7 +69,7 @@ class SecureAgencyStore(AgencyStore):
             self.db.commit(); return approval
         except BaseException:
             self.db.rollback(); raise
-    def decide(self,approval,reviewer,allow):
+    def _decide_internal(self,approval,reviewer,allow):
         # reviewer must be authenticated by a future trusted API boundary.
         if not isinstance(reviewer,str) or not reviewer.strip() or len(reviewer)>128 or type(allow)!=bool: raise ValueError('Invalid decision')
         self._start()
@@ -81,7 +81,7 @@ class SecureAgencyStore(AgencyStore):
             self.db.commit()
         except BaseException:
             self.db.rollback(); raise
-    def consume(self,approval,task_id,action,params):
+    def _consume_internal(self,approval,task_id,action,params):
         h=fingerprint(params)
         self._start()
         try:
@@ -126,7 +126,7 @@ class SecureAgencyStore(AgencyStore):
             raise PermissionError('Authenticated reviewer required')
         if 'approver' not in principal.roles:
             raise PermissionError('Approver role required')
-        return self.decide(approval,principal.identity,allow)
+        raise PermissionError('Use TrustedApprovalService for authenticated decisions')
 
 class AuthenticatedReviewer:
     """Opaque reviewer principal; instantiate only inside a trusted boundary.
@@ -141,3 +141,9 @@ class AuthenticatedReviewer:
             raise ValueError('Invalid roles')
         self.identity=identity
         self.roles=roles
+
+    def decide(self,*args,**kwargs):
+        raise PermissionError('Legacy unauthenticated decision disabled')
+
+    def consume(self,*args,**kwargs):
+        raise PermissionError('Legacy unauthenticated consumption disabled')
