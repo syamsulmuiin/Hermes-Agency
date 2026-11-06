@@ -175,3 +175,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added three unit tests for type validation, disabled sandbox capability reporting, and delegation. Tests committed but not yet independently executed on VPS/CI.
 - SECURITY LIMIT: this is not an LLM runtime; submit_stage_result is internal-only and unauthenticated. Do not expose it to remote callers. No real agent execution, shell, network, or filesystem tools are enabled.
 - Next: validate tests; add authenticated trusted service boundary; implement sandboxed tool broker with actual isolation validation before enabling external effects.
+
+## Phase 5I.1: Trusted in-process stage execution (2026-11-06)
+- Added agency/trusted_execution.py, requiring a valid worker credential whose verified identity equals the current stage agent before submitting structured results to the existing coordinator.
+- Reuses TrustedApprovalService verification and enforces shared store identity; no shell/network/tool invocation.
+- Added tests/test_trusted_execution.py for success, mismatched identity, approver-only role, invalid token and store mismatch. Committed; VPS/CI tests not yet verified.
+- SECURITY LIMIT: credential issuance is a trusted-infrastructure operation, not an agent API. This in-process wrapper does not authenticate HTTP clients, authorize LLM-produced text, or prevent malicious code already running in the same Python process from bypassing it. No external agent endpoints should be exposed yet.
+- Next: verify unit tests, introduce process-isolated authenticated server boundary and agent-specific non-mintable credentials; then connect constrained LLM adapters and audited tool broker.
