@@ -243,3 +243,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_cross_uid_listener.py for same-UID denial, wrong-group denial, and existing-path protection. Committed; latest CI verification pending.
 - Still not proven: real separate-UID subprocess connectivity, server-owned private key/database directory, supervisor lifecycle and response acknowledgements. This one-shot listener is a security building block, not a deployed daemon. Keep tool execution disabled.
 - Next: integrate a minimal authenticated client and real separate-UID process integration in a single CI acceptance test (only when suitable OS user provisioning is available), then supervised lifecycle.
+
+## Phase 5 consolidated integration: unprivileged client (2026-11-06)
+- Added agency/trusted_client.py and tests/test_trusted_client.py: strict size/schema validation and Unix-domain socket submission from an unprivileged client, without issuing credentials, accessing DB/keys or invoking tools.
+- IMPORTANT: send_stage returning does NOT prove server accepted the stage; current server has no acknowledgement framing. Acknowledged authenticated protocol and separate-UID subprocess tests remain acceptance requirements.
+- User requested a single consolidated Phase 5 CI gate; continue using existing GitHub Actions full unittest suite. These new tests are committed but CI result is not yet confirmed.
+- Next: add bounded server acknowledgement protocol with no sensitive exception leakage; verify real distinct UID process connectivity and server-owned secret directory, then supervised lifecycle and consolidated acceptance.
