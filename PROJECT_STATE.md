@@ -68,6 +68,15 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - Node.js 20 deprecation warning from checkout@v4 and setup-python@v5 is non-fatal and separate from the test failures.
 - Do not re-enable insecure legacy approval paths to make tests green.
 
+## Phase 5A: Tool-free orchestration foundation (2026-11-06)
+- User reported latest GitHub Actions succeeded after the previous CI fixes. The GitHub connector did not independently return a successful push-run status for the latest branch commit; record user confirmation separately from verified CI evidence.
+- Added agency/orchestrator.py with a deterministic, persisted six-agent route, transactional stage advance, single completion, duplicate-stage rejection, and restartable SQLite checkpoints.
+- Added tests/test_orchestrator.py covering six-stage workflow, restart, replay, active leases, invalid results, and terminal state.
+- No LLM calls, shell execution, network calls, file-writing tools, or deployment were connected.
+- SECURITY LIMIT: advance() accepts an agent label without authenticating the caller; it is an internal prototype API only, not a public endpoint. No external actions may be attached to it.
+- CI for the new orchestration commits is not yet confirmed. Do not claim the new tests pass until the latest run is inspected.
+- Next: inspect fresh CI; build a trusted authenticated service boundary and key management, then implement tool-side fencing/idempotency and isolated sandbox before enabling real execution.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
