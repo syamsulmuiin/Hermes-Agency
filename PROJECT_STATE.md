@@ -342,3 +342,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled commit 25db948 and ran deploy/live_positive_e2e.py using a root-readable staged copy. Output: CROSS_UID_VALID_CREDENTIAL=PASS, SQLITE_WORKFLOW_ADVANCED=PASS, LIVE_E2E=PASS, TEST_EXIT_CODE=0; hermes-agency.service remained active.
 - Verified trusted-only signing key access, short-lived worker credential passed to separate UID, authenticated live Unix socket submission, and persisted CEO-to-PM workflow transition in SQLite. This creates one durable test workflow record.
 - Still unverified: systemd restart persistence and reboot recovery. Independent sandbox, tool execution, LLM-driven agents and autonomous operations remain unimplemented.
+
+## VPS systemd restart persistence verified (2026-11-07)
+- Operator measured SQLite workflow_progress count=1 and handoffs count=1 before restart; after systemctl restart hermes-agency.service both counts remained 1.
+- systemctl is-active reported active; /run/hermes-agency ownership hermes-trusted:hermes-agents and mode 0710 remained correct.
+- This verifies basic restart persistence and transport directory ownership, not reboot recovery, socket availability post-restart, or active in-flight task recovery.
+- Next development phase: independent sandbox design and incremental fail-closed implementation, without altering existing live trusted service until independently validated.
