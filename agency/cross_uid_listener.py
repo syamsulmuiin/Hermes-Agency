@@ -11,10 +11,13 @@ import stat
 
 from .cross_uid_policy import verify_cross_uid_transport
 from .trusted_peer import serve_authenticated_peer
+from .trusted_ack import serve_with_ack
 
 
-def serve_cross_uid_once(path, boundary, allowed_uids, client_gid):
+def serve_cross_uid_once(path, boundary, allowed_uids, client_gid, acknowledged=False):
     """Handle one authenticated request; fail closed on mismatched ownership."""
+    if type(acknowledged) is not bool:
+        raise ValueError("Invalid acknowledgement mode")
     if not isinstance(path, str) or not path or len(os.fsencode(path)) > 100:
         raise ValueError("Invalid socket path")
     if (not isinstance(allowed_uids, frozenset) or not allowed_uids
@@ -41,6 +44,8 @@ def serve_cross_uid_once(path, boundary, allowed_uids, client_gid):
         listener.listen(1)
         connection, _ = listener.accept()
         with connection:
+            if acknowledged:
+                return serve_with_ack(connection, boundary, allowed_uids)
             return serve_authenticated_peer(connection, boundary, allowed_uids)
     finally:
         listener.close()
