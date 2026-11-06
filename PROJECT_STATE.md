@@ -236,3 +236,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - GitHub Actions run 42221295528 job 127903716647: 76 tests, 1 failure in test_phase5_integration.py. Root cause: SQLite connection created in main thread, used by trusted server thread (sqlite3.ProgrammingError).
 - Fixed test to run serve_bounded on SQLite-owning main thread and move only socket client I/O to a background thread. No SQLite thread-safety override, security weakening, or production workflow changes.
 - Fix commit bb687c41e2a8bba214075361a6a084364c89f472; new CI result pending verification. Continue using one full Phase 5 CI suite, not repeated manual per-subphase tests.
+
+## Phase 5 consolidated continuation: cross-UID listener (2026-11-06)
+- User reports consolidated Phase 5 build succeeded. Continue with one CI suite, no repeated subphase test requests.
+- Added agency/cross_uid_listener.py to bind a Unix socket in a pre-provisioned 0710 trusted-owned transport directory with dedicated client group, validate resulting 0660 socket ownership/mode, require explicit allowed client UIDs distinct from the server, and enforce SO_PEERCRED plus worker credentials. It does not modify directory permissions, chown, grant credentials, or run tools.
+- Added tests/test_cross_uid_listener.py for same-UID denial, wrong-group denial, and existing-path protection. Committed; latest CI verification pending.
+- Still not proven: real separate-UID subprocess connectivity, server-owned private key/database directory, supervisor lifecycle and response acknowledgements. This one-shot listener is a security building block, not a deployed daemon. Keep tool execution disabled.
+- Next: integrate a minimal authenticated client and real separate-UID process integration in a single CI acceptance test (only when suitable OS user provisioning is available), then supervised lifecycle.
