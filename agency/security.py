@@ -120,6 +120,13 @@ class SecureAgencyStore(AgencyStore):
             self.db.rollback()
             raise
 
+
+    def decide(self,*args,**kwargs):
+        raise PermissionError('Legacy unauthenticated decision disabled')
+
+    def consume(self,*args,**kwargs):
+        raise PermissionError('Legacy unauthenticated consumption disabled')
+
     def decide_authenticated(self,approval,principal,allow):
         """Use only a principal resolved by trusted authentication middleware."""
         if not isinstance(principal,AuthenticatedReviewer):
@@ -141,9 +148,3 @@ class AuthenticatedReviewer:
             raise ValueError('Invalid roles')
         self.identity=identity
         self.roles=roles
-
-    def decide(self,*args,**kwargs):
-        raise PermissionError('Legacy unauthenticated decision disabled')
-
-    def consume(self,*args,**kwargs):
-        raise PermissionError('Legacy unauthenticated consumption disabled')
