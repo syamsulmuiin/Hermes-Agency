@@ -360,3 +360,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_linux_sandbox.py for root refusal, invalid limits, denied isolation and forged evidence.
 - This is an actual attempted isolated *probe*, not a general agent command runner. No arbitrary agent code/tools, seccomp filter, cgroup enforcement, safe bind mounts or network policy are implemented. Rootless user namespaces may be disabled on the VPS. No live VPS isolation result or full suite result yet; do not claim readiness.
 - Next: run tests and live probe as hermes-worker from deployed Python module; verify namespace isolation and kernel policy, then implement narrowly allowlisted tools only after escape/resource tests and approvals.
+
+## Stale socket recovery patch (2026-11-07)
+- VPS reported systemd auto-restart loop: FileExistsError for /run/hermes-agency/trusted.sock. Operator manually recovered stale socket and service returned active.
+- Added agency/stale_socket.py and wired cross_uid_listener to attempt recovery only for a same-UID socket that refuses connection; regular files, symlinks, foreign-owner sockets, and accepting sockets are rejected. Added regression tests and updated existing expected exception.
+- Caveat: inode recheck does not make unlink atomic against a competing process. The single-instance systemd supervisor remains a required assumption; do not expose listener creation to untrusted concurrent callers.
+- Patch not yet deployed to /opt/hermes-agency or validated on VPS. Sandbox user namespaces remain denied by AppArmor policy; no global AppArmor changes authorized.
