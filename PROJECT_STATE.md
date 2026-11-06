@@ -315,3 +315,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added deploy/smoke_negative_auth.py: a worker-UID, no-secret, no-task-creation live probe using a deliberately invalid credential and unknown task ID. Requires an explicit denied acknowledgement; retries short socket rebind gaps. Does not exercise valid credential acceptance or task state transitions.
 - Pending: user runs the script on VPS, verifies service remains active, then trusted-only operator provisioning and end-to-end positive workflow test can be designed without exposing signing secrets to workers.
 - The live /opt/hermes-agency service code has not been updated or restarted by these repository commits. No host test result is claimed.
+
+## Live negative-auth verification (2026-11-07)
+- VPS operator ran deploy/smoke_negative_auth.py as hermes-worker from a root-readable staging location under /tmp; INVALID_CREDENTIAL_DENIED=PASS, exit code 0, and hermes-agency.service remained active.
+- Initial attempt directly from /root/Hermes-Agency failed with permission denied, consistent with worker isolation; no security permissions were relaxed. Staging script was removed after test.
+- This proves only denial of that invalid credential via the live socket. Valid credential acceptance, mismatched agent identity, unauthorized UID, workflow persistence across restart, and reboot recovery remain unverified.
