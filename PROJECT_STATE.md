@@ -84,6 +84,14 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - Runtime is dry-run only: no sandbox, authenticated server, key rotation or real tool adapter. Do not enable external execution.
 - Next after successful runtime CI: implement trusted operator authentication, key lifecycle, and isolated tool adapter with OS-enforced sandbox and fencing. Retain fail-closed behavior.
 
+## Phase 5C: Local operator authentication prototype (2026-11-06)
+- User reports the latest GitHub Actions successful, including the Phase 5B runtime tests; this is user-reported rather than independently verified by a push-run query.
+- Added agency/operator_auth.py: offline scrypt verifier provisioning, constant-time secret comparison, and short-lived approver credential issuance from the trusted service.
+- Added tests/test_operator_auth.py: valid operator, wrong secret, short secret, and role separation.
+- SECURITY LIMITS: operator gate is an in-process prototype; no HTTP/session authentication, rate limiting, MFA, secret storage automation, account lockout, key rotation, or sandbox.
+- Never expose LocalOperatorGate or TrustedApprovalService.issue_credential to an agent. No real tools are connected.
+- CI for Phase 5C commits remains unverified. Next: confirm tests, add hardened authenticated service boundary, secret lifecycle and OS-enforced sandbox; only then tool-side fenced execution.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
