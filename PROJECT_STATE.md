@@ -348,3 +348,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - systemctl is-active reported active; /run/hermes-agency ownership hermes-trusted:hermes-agents and mode 0710 remained correct.
 - This verifies basic restart persistence and transport directory ownership, not reboot recovery, socket availability post-restart, or active in-flight task recovery.
 - Next development phase: independent sandbox design and incremental fail-closed implementation, without altering existing live trusted service until independently validated.
+
+## Independent sandbox implementation checkpoint (2026-11-07)
+- Added agency/sandbox_preflight.py: read-only Linux namespace prerequisite inspection; never treats namespace presence as proof of isolation, never enables tools.
+- Added tests/test_sandbox_preflight.py: missing namespace prerequisites, simulated prerequisites, and invalid report all fail closed.
+- No actual sandbox runner, filesystem/network isolation, LLM or tool execution implemented. Tests not yet run on VPS. This checkpoint is NOT a finished independent sandbox or finished Hermes-Agency.
+- Next: implement and independently validate a real isolated runner, resource ceilings, filesystem/network denial and escape tests before any tool access; then integrate LLM/agent execution behind existing trusted boundary.
