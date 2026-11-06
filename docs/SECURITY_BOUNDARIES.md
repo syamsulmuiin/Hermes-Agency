@@ -1,13 +1,26 @@
-# Security boundaries
+# Trusted Runtime Foundation — security boundaries
 
-The current foundation is a local prototype, not an authorization service.
+This is a **prototype authorization boundary**, not an executable agent runtime.
 
-- SQLite BEGIN IMMEDIATE serializes claims, state changes, and handoffs across local connections.
-- Fencing tokens protect database state from stale workers. They do not prevent a stale worker from producing external side effects.
-- Handoff payloads are bounded and validated, but no signed provenance or idempotency key exists yet.
-- Approvals are persisted and one-time, bound to task, action, and parameters. They do not currently authenticate reviewers.
-- AuthenticatedReviewer is a data holder, **not proof of authentication**. Do not construct it from user-supplied identities.
-- The legacy decide(approval, reviewer, allow) API still accepts a string; it must be removed or restricted before attaching tools.
-- Never expose consume() as a general authorization endpoint without binding the authenticated actor, active lease, and tool call in one trusted transaction.
-- No shell, network, deployment, secret-access, or filesystem-write tool is wired to this package.
-- Do not use this package for privileged execution until a trusted API identity boundary, tool-side idempotency, and sandbox have been tested.
+## Implemented
+- Legacy `SecureAgencyStore.decide()`, `consume()`, and `decide_authenticated()` entrypoints reject calls.
+- `TrustedApprovalService` verifies HMAC-SHA256 signed, expiring, audience-bound credentials with approver/worker roles.
+- Only the trusted server may hold the signing key and issue credentials after real identity verification. **Do not expose `issue_credential()` to agents, tools, or unauthenticated API clients.**
+- Reviewer cannot approve a request from the same agent identity; requests are single-use and parameter-bound.
+- Execution grant reservation checks active task state, worker identity, fencing lease token, approval expiry and action digest in one SQLite transaction.
+- Idempotency key and approval ID are unique in `execution_grants`; replay is rejected.
+- Claims and handoffs use `BEGIN IMMEDIATE` for local SQLite serialization.
+
+## Still unsafe for execution
+- HMAC credentials are not a login mechanism. There is no network server, TLS identity provider, secret rotation, revocation list, or authorization middleware.
+- Any code with direct database access or the signing key can bypass this in-process boundary. Protect the process and DB with OS permissions and a separate trusted service.
+- `_decide_internal` and `_consume_internal` are private-by-convention only; Python does not enforce isolation.
+- A reserved grant is **not** a capability to execute external commands. Tool-side fencing, sandbox, allowlists, timeout and side-effect idempotency must be implemented before wiring tools.
+- There is no durable job scheduler, LLM adapter, self-repair, or deployment.
+- GitHub Actions test results must be inspected; uploaded code alone does not prove test success.
+
+## Test
+`python -m unittest discover -s tests -v`
+
+## Next gate
+Trusted server authentication (OIDC/session or local authenticated approval UI), signed principal issuance inside the trusted process, key storage and rotation, tool-side idempotency, sandbox and crash-recovery tests.
