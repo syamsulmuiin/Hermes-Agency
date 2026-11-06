@@ -24,3 +24,10 @@ This is a **prototype authorization boundary**, not an executable agent runtime.
 
 ## Next gate
 Trusted server authentication (OIDC/session or local authenticated approval UI), signed principal issuance inside the trusted process, key storage and rotation, tool-side idempotency, sandbox and crash-recovery tests.
+
+## Phase 5G sandbox probe
+- Fixed Bubblewrap /bin/true capability probe only; no agent-controlled command.
+- Uses an empty environment, read-only system mounts, private /tmp, isolated namespaces, a timeout, and conservative process rlimits.
+- Unit tests use mocks; the target Linux VPS must pass a real probe before host compatibility can be claimed.
+- Process rlimits do not replace cgroups, seccomp, trusted service separation, or tool-side fencing. No real tools are authorized.
+- Follow docs/SANDBOX_VALIDATION.md for non-root VPS validation.
