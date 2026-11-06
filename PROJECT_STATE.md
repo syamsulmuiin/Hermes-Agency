@@ -288,3 +288,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_single_vps_service.py for fail-closed startup and resource cleanup. New GitHub Actions result pending.
 - CRITICAL remaining blockers to calling the system production-ready: persistent supervised lifecycle; trusted credential issuance and task creation operator workflow; actual distinct-UID subprocess integration and file isolation; independent sandbox enforcement for tool execution; final VPS acceptance. Do not claim six autonomous LLM agents or sandboxed tools work: current six-agent workflow is deterministic and tool-free.
 - Immediate acceptance path: GitHub Actions must pass; then provision dedicated non-root service/client accounts and test full process separation on the single VPS. No secrets or permissions should be loosened for testing.
+
+## VPS unittest root fixture correction (2026-11-07)
+- VPS reported 107 tests, one ERROR in test_deployment_preflight.test_valid_permissions. Root-owned temporary directories were incorrectly checked with mocked effective UID 1000, producing a false owner mismatch. Corrected the test to use the actual UID; root must fail the non-root gate, while non-root fixtures may pass. No production permission policy was changed.
+- Fix commit ecf2c6e096bf86386e5ecc16b42693a347471b61; full post-fix CI/VPS rerun pending. Continue Phase 5 only after rerun passes.
