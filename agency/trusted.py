@@ -3,6 +3,7 @@
 The signing key MUST be held by a trusted server process and never exposed to agents.
 """
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -63,7 +64,7 @@ class TrustedApprovalService:
                 or not math.isfinite(claims['exp']) or claims['exp']<=self.clock()):
                 raise PermissionError('Invalid credential claims')
             return claims['sub']
-        except (ValueError,TypeError,KeyError,UnicodeError,AttributeError) as exc:
+        except (ValueError,TypeError,KeyError,UnicodeError,AttributeError,binascii.Error) as exc:
             raise PermissionError('Invalid credential') from exc
 
     def decide(self,approval,credential,allow):
