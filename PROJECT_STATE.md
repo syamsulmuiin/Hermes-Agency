@@ -155,3 +155,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - User executed `sandbox_capabilities()` as non-root `nobody` on Linux x86_64: `bubblewrap_installed=True`, `backend=disabled`, `isolated_probe=False`, `agent_tools_enabled=False`, `reason=host_namespace_policy_or_isolation_denied`.
 - Verified: capability reporting fails closed and provides a portable diagnostic. Not verified: any functioning non-root isolated executor on this VPS or compatibility across all VPS.
 - Next: implement and test a genuinely isolated alternative backend under the same policy, or retain safe-only mode when none is available. No host policy changes or privileged agent execution.
+
+## Phase 5H: Independent sandbox discovery (2026-11-06)
+- Reviewed NousResearch/hermes-agent environment architecture, especially tools/environments/docker.py and docker_egress.py. This project does not import Hermes Agent or rely on Bubblewrap for the new backend discovery.
+- Added agency/independent_sandbox.py: read-only Docker CLI candidate detection and unconditional fail-closed execution guard; no Docker socket access, host shell fallback, or arbitrary agent execution.
+- Added tests/test_independent_sandbox.py with three regression tests. These tests are committed but CI/VPS results are not yet verified.
+- IMPORTANT: Docker candidate detection is not container isolation. Existing Bubblewrap probe remains unchanged; no independent executable backend exists yet.
+- Next: design a trusted privileged broker and strictly constrained container runner; verify daemon policy, mounts, network, user IDs, cgroups and side-effect fencing; run real non-root tests before enabling tools.
