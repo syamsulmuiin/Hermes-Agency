@@ -48,6 +48,16 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - CI results have not been confirmed. Do not claim that the committed tests pass until a run is inspected.
 - The AuthenticatedReviewer object is forgeable in-process and legacy decide() still accepts a reviewer string. Approval remains unsafe for real tools.
 
+## Phase 4: Trusted Runtime Foundation (2026-11-06)
+- Disabled public legacy approval decision and consumption methods on SecureAgencyStore.
+- Added agency/trusted.py with HMAC-SHA256 expiring role-scoped credentials and transactional, one-time worker/lease/action-bound grant reservations.
+- Updated tests/test_security.py and tests/test_hardening.py to use the new trusted boundary.
+- Added tests/test_trusted.py covering credential tampering, expiry, replay, mismatched worker, stale lease and legacy bypass.
+- Updated docs/SECURITY_BOUNDARIES.md.
+- Verification BLOCKED: container cannot resolve github.com to clone the repository; GitHub Actions run results have not been confirmed. Do not claim test pass.
+- Security BLOCKED: issue_credential must only be called after real server-side authentication. Signing key is not provisioned. Python in-process access is not an isolation boundary. No tools are connected.
+- Next: verify CI and fix any failing tests; build authenticated API/session boundary with key rotation and protected storage; implement tool-side fencing/idempotency and sandbox; then orchestrator.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
