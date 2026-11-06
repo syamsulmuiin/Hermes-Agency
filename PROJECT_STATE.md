@@ -371,3 +371,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator ran full regression suite: 126/126 PASS; installed stale socket patch into /opt/hermes-agency; PATCH_IMPORT=PASS; service active after restart; DEPLOYMENT=PASS. Backup: /tmp/hermes-rollback.et0mme. Live stale socket restart simulation not yet verified.
 - Rootless worker unshare --user --map-root-user true failed writing uid_map with EPERM; host has kernel.apparmor_restrict_unprivileged_userns=1. No global AppArmor changes authorized.
 - Corrected sandbox bug: host UID/GID must be captured before CLONE_NEWUSER, with regression guard. This change is committed but not yet validated on VPS. Sandbox remains probe-only, no agent tool execution and no verified isolation on this host.
+
+## Adaptive sandbox portability milestone (2026-11-07)
+- Added agency/adaptive_sandbox.py: host inventory and deterministic backend planning for rootless namespace, bubblewrap, systemd, podman and docker. Presence and caller-provided evidence are NOT trusted execution attestations; tools always remain disabled.
+- Added five tests to ensure unsupported, forged/incomplete and merely installed backends cannot enable tools. VPS test run pending; previous accepted suite 127/127.
+- Next: implement independently verified per-backend execution probes and policy-specific attestations, then a bounded executor with filesystem/network/process/resource isolation; no global AppArmor relaxation.
