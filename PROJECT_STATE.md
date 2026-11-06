@@ -376,3 +376,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added agency/adaptive_sandbox.py: host inventory and deterministic backend planning for rootless namespace, bubblewrap, systemd, podman and docker. Presence and caller-provided evidence are NOT trusted execution attestations; tools always remain disabled.
 - Added five tests to ensure unsupported, forged/incomplete and merely installed backends cannot enable tools. VPS test run pending; previous accepted suite 127/127.
 - Next: implement independently verified per-backend execution probes and policy-specific attestations, then a bounded executor with filesystem/network/process/resource isolation; no global AppArmor relaxation.
+
+## Sandbox Validation Engine, fixed-probe stage (2026-11-07)
+- VPS accepted adaptive planning milestone: 132/132 tests PASS and trusted service active.
+- Added agency/sandbox_validation.py to attempt only existing fixed rootless namespace and bubblewrap probes, with bounded timeout, safe failure reasons, and fail-closed agent execution. Systemd/Podman/Docker remain explicitly unimplemented; no generic tool execution or privileged daemon probing.
+- Added five tests covering timeout validation, successful probes not granting tool execution, safe failure classification, root refusal and invalid report.
+- Pending: VPS regression (expected 137 tests), real non-root probe, AppArmor-compatible isolation backend, stronger attestations and resource/network/process isolation before tools can be enabled. No production deployment performed.
