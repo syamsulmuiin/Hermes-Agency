@@ -8,6 +8,7 @@ import hmac
 import json
 import math
 import secrets
+import sqlite3
 import time
 
 from .security import fingerprint
@@ -80,3 +81,37 @@ def verify_broker_grant(envelope, key, now=None):
     if not issued <= current < expiry or not 0 < expiry - issued <= 60:
         raise PermissionError("Expired or future grant")
     return claims
+
+
+def verify_live_lease(trusted_db_path, claims, now=None):
+    """Read-only live fencing check against trusted SQLite state.
+
+    The trusted database must be opened through an operator-controlled path,
+    never supplied by an untrusted socket request.
+    """
+    current = time.time() if now is None else now
+    if not isinstance(trusted_db_path, str) or not trusted_db_path.startswith("/"):
+        raise PermissionError("Trusted database path must be absolute")
+    try:
+        db = sqlite3.connect("file:" + trusted_db_path + "?mode=ro", uri=True, timeout=5)
+        try:
+            db.execute("PRAGMA query_only=ON")
+            row = db.execute("""SELECT l.worker,l.generation,l.expires_at,t.status,t.owner
+                FROM task_leases l JOIN tasks t ON t.id=l.task_id
+                WHERE l.task_id=?""", (claims["task"],)).fetchone()
+            grant = db.execute("""SELECT g.approval_id,g.worker,g.lease_generation,
+                    g.action,g.params_hash,a.status
+                FROM execution_grants g JOIN approvals a ON a.id=g.approval_id
+                WHERE g.idempotency_key=? AND g.task_id=?""",
+                (claims["id"], claims["task"])).fetchone()
+        finally:
+            db.close()
+    except sqlite3.Error as exc:
+        raise PermissionError("Trusted state unavailable") from exc
+    if (not row or row[0] != claims["worker"]
+        or row[1] != claims["lease_generation"] or row[2] <= current
+        or row[3] != "in_progress" or row[4] not in ("developer", "qa", "researcher", "designer", "pm", "ceo")
+        or not grant or grant != (claims["approval"], claims["worker"],
+            claims["lease_generation"], "execute_shell", claims["params_hash"], "consumed")):
+        raise PermissionError("Lease revoked, expired or grant provenance invalid")
+    return True
