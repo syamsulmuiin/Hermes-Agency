@@ -77,6 +77,13 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - CI for the new orchestration commits is not yet confirmed. Do not claim the new tests pass until the latest run is inspected.
 - Next: inspect fresh CI; build a trusted authenticated service boundary and key management, then implement tool-side fencing/idempotency and isolated sandbox before enabling real execution.
 
+## Phase 5B validation checkpoint (2026-11-06)
+- User reports latest GitHub Actions run successful. The previously added agency/runtime.py had no tests/test_runtime.py at the time of that run, so that success does not validate the runtime module.
+- Added tests/test_runtime.py with grant mismatch, worker identity mismatch, stale lease, no-side-effects and key-file permission checks.
+- The new test commit is not yet confirmed green in CI. Phase 5B remains incomplete pending these results.
+- Runtime is dry-run only: no sandbox, authenticated server, key rotation or real tool adapter. Do not enable external execution.
+- Next after successful runtime CI: implement trusted operator authentication, key lifecycle, and isolated tool adapter with OS-enforced sandbox and fencing. Retain fail-closed behavior.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
