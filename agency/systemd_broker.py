@@ -137,3 +137,40 @@ def serve_once(path, trusted_uid, db_path):
     finally:
         listener.close()
         os.unlink(path)
+
+
+def execute_signed_grant(db_path, envelope, verification_key,
+                         executor=run_systemd_job, now=None):
+    """Consume a verified trusted grant once before invoking fixed systemd job.
+
+    This is a distinct protocol from legacy operator approvals. The key must
+    be provisioned out-of-band to trusted issuer and root broker only.
+    """
+    from .broker_grants import verify_broker_grant
+    claims = verify_broker_grant(envelope, verification_key, now=now)
+    verify_private_ledger(db_path)
+    db = sqlite3.connect(db_path, timeout=5, isolation_level=None)
+    try:
+        db.execute("BEGIN IMMEDIATE")
+        db.execute("""CREATE TABLE IF NOT EXISTS signed_grant_consumptions(
+            grant_id TEXT PRIMARY KEY, task_id TEXT NOT NULL,
+            worker TEXT NOT NULL, lease_generation INTEGER NOT NULL,
+            job TEXT NOT NULL, approval_id TEXT NOT NULL, status TEXT NOT NULL)""")
+        try:
+            db.execute("INSERT INTO signed_grant_consumptions VALUES (?,?,?,?,?,?,?)",
+                       (claims["id"], claims["task"], claims["worker"],
+                        claims["lease_generation"], claims["job"],
+                        claims["approval"], "started"))
+        except sqlite3.IntegrityError as exc:
+            db.rollback()
+            raise PermissionError("Grant replay denied") from exc
+        db.commit()
+        try:
+            result = executor(claims["job"])
+        except BaseException:
+            db.execute("UPDATE signed_grant_consumptions SET status='failed' WHERE grant_id=?", (claims["id"],))
+            raise
+        db.execute("UPDATE signed_grant_consumptions SET status='completed' WHERE grant_id=?", (claims["id"],))
+        return result
+    finally:
+        db.close()
