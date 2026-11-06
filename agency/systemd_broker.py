@@ -4,6 +4,7 @@ The root broker accepts a trusted UID over a private Unix socket and a
 one-time operator-issued approval. It never accepts arbitrary commands.
 """
 import json
+import stat
 import os
 import socket
 import sqlite3
@@ -11,6 +12,32 @@ import struct
 import time
 
 from .systemd_jobs import JOBS, run_systemd_job
+
+
+def verify_private_ledger(path):
+    if not os.path.isabs(path):
+        raise PermissionError("Absolute ledger path required")
+    parent = os.lstat(os.path.dirname(path))
+    info = os.lstat(path)
+    if (parent.st_uid != 0 or parent.st_mode & 0o022 or
+        not stat.S_ISDIR(parent.st_mode) or info.st_uid != 0 or
+        not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077 or
+        info.st_nlink != 1):
+        raise PermissionError("Unsafe broker ledger")
+
+def provision_approval(path, approval_id, job):
+    """Root-only manual provisioning; no socket issuance endpoint."""
+    if os.geteuid() != 0:
+        raise PermissionError("Root operator required")
+    verify_private_ledger(path)
+    if type(job) is not str or job not in JOBS:
+        raise PermissionError("Job not allowlisted")
+    if (type(approval_id) is not str or len(approval_id) < 32 or
+        len(approval_id) > 128 or not approval_id.isascii() or
+        not approval_id.isalnum()):
+        raise PermissionError("Invalid approval identifier")
+    with sqlite3.connect(path) as db:
+        db.execute("INSERT INTO approvals(id,job) VALUES (?,?)", (approval_id, job))
 
 
 def initialize_ledger(db_path):
@@ -30,6 +57,7 @@ def execute_approved(db_path, approval_id, job, executor=run_systemd_job):
         raise PermissionError("Job not allowlisted")
     if type(approval_id) is not str or len(approval_id) < 16 or len(approval_id) > 128 or not approval_id.isascii() or not approval_id.isalnum():
         raise PermissionError("Invalid approval")
+    verify_private_ledger(db_path)
     db = sqlite3.connect(db_path, timeout=5, isolation_level=None)
     try:
         db.execute("BEGIN IMMEDIATE")
@@ -80,6 +108,7 @@ def serve_once(path, trusted_uid, db_path):
         raise PermissionError("Root broker required")
     if type(trusted_uid) is not int or trusted_uid <= 0:
         raise ValueError("Invalid trusted UID")
+    verify_private_ledger(db_path)
     if not os.path.isabs(path) or os.path.lexists(path):
         raise PermissionError("Unsafe broker socket path")
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
