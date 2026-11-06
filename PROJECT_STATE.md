@@ -387,3 +387,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added agency/isolated_jobs.py: executes two fixed built-in jobs (noop, identity) as actual subprocesses under bubblewrap with namespace isolation, read-only /usr, no host shell, cleared environment, rlimits, timeout and bounded stdout. Any backend failure denies execution; no host fallback.
 - Added six regression tests for allowlist, root/timeout rejection, missing backend, isolated invocation and failed backend. VPS verification pending (expected 143 tests).
 - IMPORTANT: current VPS previously failed bubblewrap probe, so actual execution is expected to fail closed until an approved backend works. This does NOT implement general agent tool execution, seccomp, cgroups or complete resource confinement. No production runtime deployment.
+
+## Operator-only systemd execution backend (2026-11-07)
+- VPS rootless Bubblewrap failed loopback RTM_NEWADDR and uid_map Permission denied. Do not weaken AppArmor or host namespace policy.
+- Added agency/systemd_jobs.py for two immutable diagnostic jobs through systemd-run transient services with DynamicUser, PrivateNetwork, strict filesystem protection, capabilities removed, runtime and resource limits. Root operator only; no sudo permissions granted to agents and no integration into trusted service.
+- Added six regression tests. VPS regression expected 149 tests; actual systemd-run validation pending. This is a constrained executor, NOT production-grade arbitrary agent execution; inspect transient unit properties and verify host filesystem/network isolation before enabling further capabilities.
