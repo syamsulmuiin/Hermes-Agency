@@ -305,3 +305,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Known operational gap: /run/hermes-agency was manually provisioned; reboot-time recreation has not been configured/verified. The running /opt/hermes-agency copy does not update when GitHub branch is committed or /root/Hermes-Agency is pulled.
 - Still open: signed cross-UID stage acceptance and rejection on VPS, unauthorized UID check, workflow restart persistence, restart-on-failure/boot test, trusted operator provisioning, independent OS-enforced sandbox, LLM-backed six-agent execution, tool-side fencing. Do not call autonomous system complete.
 - Documentation-only commits do not require restarting the live service. New GitHub Actions result for documentation commits not yet inspected.
+
+## README scope and boot directory fix (2026-11-07)
+- Removed experimental single-VPS runtime sections from both README.md and README-id.md as requested. Detailed truthful runtime status remains in docs/SINGLE_VPS_DEPLOYMENT.md and PROJECT_STATE.md.
+- Added deploy/hermes-agency.tmpfiles.conf to recreate /run/hermes-agency at boot with 0710 hermes-trusted:hermes-agents; deployment guide now includes explicit installation instructions and cautions about /opt runtime copy. Not installed or reboot-tested yet.
+- No change to live VPS service or agent execution permissions. New GitHub Actions result pending. Next: consolidate cross-UID authenticated workflow and restart acceptance tests, then independently isolated agent execution; do not claim autonomy complete.
