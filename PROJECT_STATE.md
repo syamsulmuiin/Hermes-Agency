@@ -209,3 +209,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_trusted_listener.py covering existing pathname, invalid allowlist and malformed request over a real socket. New tests are committed but not yet verified on VPS/CI.
 - SECURITY LIMIT: this is a one-shot prototype, NOT a supervised production daemon. Private 0700 socket directory prevents cross-UID clients, so separate OS-user process tests are still pending. Same-UID untrusted processes may reach socket but still need a valid worker credential. No credential issuer endpoint or tool execution.
 - Next: test current suite, design controlled cross-UID socket access and trusted process startup with protected database and signing keys; test real separate OS users and crash/restart behavior before claiming isolation.
+
+## Phase 5I.6: Bounded sequential local service (2026-11-06)
+- User reports Phase 5I.5 tests OK; exact count not supplied.
+- Added agency/trusted_service.py for finite sequential Unix socket requests (1-100), per-request peer UID and worker credential checks via existing boundary, idle timeout, conservative error handling, and inode-checked socket cleanup.
+- Added tests/test_trusted_service.py for invalid limits and two rejected requests over a real socket. Tests committed; VPS/CI verification pending.
+- LIMITATIONS: This is NOT an indefinitely running daemon, nor a complete cross-UID privilege boundary. It has no response protocol, supervised restart, OS account separation or trusted credential provisioning. No tool execution is enabled. A private 0700 directory currently allows only the owner to connect.
+- Next: test this milestone; design proper separate-user transport and protected key/DB ownership, then implement an authenticated client and controlled lifecycle without weakening directory security.
