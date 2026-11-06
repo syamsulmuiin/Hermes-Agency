@@ -32,30 +32,37 @@ class PhaseFiveIntegrationTests(unittest.TestCase):
             good = service.issue_credential("ceo", "worker")
             wrong = service.issue_credential("pm", "worker")
             path = directory + "/trusted.sock"
-            outcome = []
-            thread = threading.Thread(target=lambda: outcome.append(
-                serve_bounded(path, boundary, frozenset({os.getuid()}), 2)
-            ))
+            client_errors = []
+            def send_requests():
+                try:
+                    for _ in range(200):
+                        if os.path.exists(path):
+                            break
+                        time.sleep(0.01)
+                    if not os.path.exists(path):
+                        raise AssertionError("Socket was not created")
+                    for credential in (wrong, good):
+                        payload = json.dumps({
+                            "task_id": task_id, "agent": "ceo",
+                            "result": result, "worker_credential": credential,
+                        }).encode()
+                        with socket.socket(socket.AF_UNIX) as client:
+                            client.connect(path)
+                            client.sendall(payload)
+                            client.shutdown(socket.SHUT_WR)
+                except Exception as exc:
+                    client_errors.append(exc)
+
+            # Keep the SQLite-owning thread as the trusted server thread.
+            thread = threading.Thread(target=send_requests)
             thread.start()
             try:
-                for _ in range(200):
-                    if os.path.exists(path):
-                        break
-                    time.sleep(0.01)
-                self.assertTrue(os.path.exists(path))
-                for credential in (wrong, good):
-                    payload = json.dumps({
-                        "task_id": task_id, "agent": "ceo",
-                        "result": result, "worker_credential": credential,
-                    }).encode()
-                    with socket.socket(socket.AF_UNIX) as client:
-                        client.connect(path)
-                        client.sendall(payload)
-                        client.shutdown(socket.SHUT_WR)
+                outcome = serve_bounded(path, boundary, frozenset({os.getuid()}), 2)
             finally:
                 thread.join(timeout=6)
             self.assertFalse(thread.is_alive())
-            self.assertEqual(outcome, [{"accepted": 1, "denied": 1}])
+            self.assertFalse(client_errors, client_errors)
+            self.assertEqual(outcome, {"accepted": 1, "denied": 1})
             self.assertEqual(runtime.snapshot(task_id)["owner"], "pm")
             self.assertFalse(os.path.lexists(path))
             store.close()
