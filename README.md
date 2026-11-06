@@ -29,15 +29,28 @@
 
 ---
 
-## Experimental secure runtime (development branch)
+## Secure single-VPS runtime (experimental)
 
-The `development/foundation` branch includes an **experimental, non-executable**
-six-agent orchestration and security foundation. It is not production-ready
-and does not grant agents shell, filesystem write, deployment, or network tools.
-The Linux Bubblewrap capability probe runs only a fixed harmless command.
-See [Sandbox Validation](docs/SANDBOX_VALIDATION.md),
+The `development/foundation` branch also contains an **experimental trusted
+service**, separate from the original prompt-only templates. It has a
+persistent SQLite workflow, signed worker credentials, a protected Unix
+socket, and a non-root systemd deployment pattern. **It is not yet an
+autonomous six-agent AI service and is not production-ready.** Agent-selected
+shell commands, filesystem changes, deployments and network tools remain
+disabled. Independent sandbox isolation is not implemented.
+
+**Verified on the user's single VPS (2026-11-07):** 110 Python unit tests
+passed; the non-root systemd service was active; the dedicated worker UID
+could connect to the Unix socket but could not read the SQLite database or
+signing secret. This does **not** establish valid/invalid credential behavior
+on the VPS, unauthorized UID rejection, workflow recovery across restart, or
+autonomous task execution.
+
+For the exact security model, deployment layout, pending acceptance checks,
+and development handoff, see [Single-VPS Deployment](docs/SINGLE_VPS_DEPLOYMENT.md),
 [Security Boundaries](docs/SECURITY_BOUNDARIES.md), and
-[Project State](PROJECT_STATE.md) for test instructions and current limitations.
+[Project State](PROJECT_STATE.md). Original prompt templates remain usable
+independently of this experimental runtime.
 
 ---
 
@@ -75,7 +88,7 @@ Hermes Agency is a **system prompt template** that transforms any LLM into a str
 ### 1. Clone or Download
 
 ```bash
-git clone https://github.com/malvinjauhari/Hermes-Agency.git
+git clone https://github.com/syamsulmuiin/Hermes-Agency.git
 cd Hermes-Agency
 ```
 
