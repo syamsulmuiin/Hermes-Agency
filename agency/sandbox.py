@@ -8,6 +8,7 @@ import resource
 import shutil
 import subprocess
 import sys
+import platform
 
 def _limits():
     # Applied to bwrap and inherited by its child. Not a cgroup or a guarantee
@@ -53,3 +54,39 @@ def sandbox_probe(timeout=5):
         raise RuntimeError('Sandbox unavailable or isolation denied (exit '+str(result.returncode)+'): '+(detail or 'no stderr'))
     return {'isolated_probe':True,'agent_tools_enabled':False,
             'resource_limits':'rlimit-probe-only'}
+
+
+def sandbox_capabilities(timeout=5):
+    """Read-only host report plus the fixed probe; never enables agent tools.
+
+    Missing binaries and kernel policy denials are ordinary unsupported-host
+    results. Do not bypass namespace or network isolation on failure.
+    """
+    report = {
+        'platform': sys.platform,
+        'architecture': platform.machine(),
+        'bubblewrap_installed': bool(shutil.which('bwrap')),
+        'backend': 'disabled',
+        'isolated_probe': False,
+        'agent_tools_enabled': False,
+    }
+    try:
+        sandbox_probe(timeout=timeout)
+    except (RuntimeError, ValueError) as exc:
+        message = str(exc)
+        if 'loopback:' in message or 'Operation not permitted' in message or 'isolation denied' in message:
+            reason = 'host_namespace_policy_or_isolation_denied'
+        elif 'not installed' in message:
+            reason = 'bubblewrap_missing'
+        elif 'layout' in message or 'executable missing' in message:
+            reason = 'unsupported_filesystem_layout'
+        elif 'requires Linux' in message:
+            reason = 'unsupported_platform'
+        else:
+            reason = 'probe_failed'
+        report['reason'] = reason
+        return report
+    report['backend'] = 'bubblewrap_probe_only'
+    report['isolated_probe'] = True
+    report['reason'] = 'probe_passed_executor_not_implemented'
+    return report
