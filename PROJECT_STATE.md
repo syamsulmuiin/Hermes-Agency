@@ -265,3 +265,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - User reports prior GitHub Actions run passed. Added tests/test_confirmed_workflow_integration.py: real TrustedApprovalService worker credentials, SQLite workflow handoff, Unix socket and explicit denied/accepted acknowledgements in one end-to-end CI test. The trusted SQLite connection stays in the server-owning test thread.
 - Added agency/private_state.py and tests/test_private_state.py: read-only validation of service-owned 0700 trusted/key directories, 0600 SQLite DB and auxiliary files, rejecting symlink key directory and exposed state. This validator is NOT yet wired to a production service bootstrap; it does not provision users or permissions.
 - New CI status unverified. Actual separate-UID process connectivity, server process lifecycle and supervisor remain to be tested; do not declare Phase 5 complete or enable tool execution. Request one consolidated VPS acceptance session only when deployment implementation and CI are ready.
+
+## Phase 5 consolidated: protected startup gate (2026-11-07)
+- User reports previous CI succeeded. Cross-UID one-shot listener now optionally accepts trusted_state=(private_directory, sqlite_database, key_directory), validating private-state ownership and permissions before any socket bind. Existing calls remain compatible. The validator does not provision users, repair permissions or run tools.
+- Added tests/test_cross_uid_startup_gate.py: unsafe database permissions, missing private state, and invalid configuration fail before socket creation.
+- This is opt-in for the library entrypoint; a production launcher must require trusted_state unconditionally and verify trusted service runs as a distinct non-root UID. New CI status pending.
+- Still required before Phase 5 acceptance: supervised launcher, actual cross-UID subprocess communication and verified key/DB isolation, one final VPS test. Do not enable tool execution.
