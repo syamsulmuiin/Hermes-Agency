@@ -38,6 +38,7 @@ def sandbox_probe(timeout=5):
     except (subprocess.TimeoutExpired,OSError,ValueError) as exc:
         raise RuntimeError('Sandbox probe failed') from exc
     if result.returncode!=0:
-        raise RuntimeError('Sandbox unavailable or isolation denied')
+        detail=result.stderr.decode('utf-8','replace')[:1200].strip()
+        raise RuntimeError('Sandbox unavailable or isolation denied (exit '+str(result.returncode)+'): '+(detail or 'no stderr'))
     return {'isolated_probe':True,'agent_tools_enabled':False,
             'resource_limits':'rlimit-probe-only'}
