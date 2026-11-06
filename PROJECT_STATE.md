@@ -271,3 +271,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_cross_uid_startup_gate.py: unsafe database permissions, missing private state, and invalid configuration fail before socket creation.
 - This is opt-in for the library entrypoint; a production launcher must require trusted_state unconditionally and verify trusted service runs as a distinct non-root UID. New CI status pending.
 - Still required before Phase 5 acceptance: supervised launcher, actual cross-UID subprocess communication and verified key/DB isolation, one final VPS test. Do not enable tool execution.
+
+## Phase 5: mandatory protected service entrypoint (2026-11-07)
+- User reports prior GitHub Actions successful. Added agency/protected_service.py: serve_protected_once enforces non-root trusted service UID, explicit distinct allowed client UIDs, mandatory protected SQLite/key directory validation, and acknowledged cross-UID transport. Legacy library functions remain unchanged for existing tests.
+- Added tests/test_protected_service.py for fail-closed startup and acknowledgement wiring. This is a callable entrypoint, NOT an installed systemd daemon, OS user provisioning tool, or a complete production launcher; no tools enabled. New CI status pending.
+- Next: design and test supervised lifecycle and actual separate-UID process acceptance. Request one consolidated VPS validation session after CI and deployment packaging are ready; do not repeatedly ask for manual tests.
