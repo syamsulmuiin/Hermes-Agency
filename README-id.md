@@ -29,30 +29,6 @@
 
 ---
 
-## Runtime aman single-VPS (eksperimental)
-
-Branch `development/foundation` juga berisi **trusted service
-eksperimental**, terpisah dari template prompt asli. Komponennya meliputi
-workflow SQLite persisten, kredensial worker bertanda tangan, Unix socket
-terproteksi, dan deployment systemd non-root. **Sistem ini belum menjadi
-enam agent AI otonom dan belum siap produksi.** Eksekusi shell, perubahan
-file, deployment, dan akses jaringan oleh tool agent masih dinonaktifkan.
-Sandbox mandiri belum diimplementasikan.
-
-**Terverifikasi pada satu VPS pengguna (7 November 2026):** 110 unit test
-Python lulus, service systemd non-root aktif, dan UID worker dapat
-menghubungi socket tetapi tidak dapat membaca database maupun kunci.
-Hal ini **belum** membuktikan autentikasi kredensial valid/tidak valid di
-VPS, penolakan UID lain, pemulihan workflow setelah restart, atau
-eksekusi tugas secara otonom.
-
-Lihat [Deployment Single-VPS](docs/SINGLE_VPS_DEPLOYMENT.md),
-[Batas Keamanan](docs/SECURITY_BOUNDARIES.md), dan
-[Status Proyek](PROJECT_STATE.md). Template prompt asli tetap dapat
-digunakan tanpa runtime eksperimental ini.
-
----
-
 ## Apa itu Hermes Agency?
 
 Hermes Agency adalah **template system prompt** yang mengubah LLM apa pun menjadi tim multi-agent terstruktur. Template ini menyediakan peran agen khusus, aturan governansi, dan pola workflow untuk membangun agen AI.
