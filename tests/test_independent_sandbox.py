@@ -22,3 +22,13 @@ class IndependentSandboxTests(unittest.TestCase):
     def test_denies_execution_without_validated_backend(self):
         with self.assertRaisesRegex(RuntimeError, "execution denied"):
             require_isolated_backend()
+
+    def test_podman_cli_is_candidate_not_authorization(self):
+        def which(name):
+            return "/usr/bin/podman" if name == "podman" else None
+        with patch("agency.independent_sandbox.shutil.which", side_effect=which):
+            report = discover_backends()
+        self.assertTrue(report["candidates"]["podman"]["cli_installed"])
+        self.assertFalse(report["candidates"]["podman"]["validated"])
+        self.assertFalse(report["agent_tools_enabled"])
+        self.assertEqual(report["backend"], "disabled")
