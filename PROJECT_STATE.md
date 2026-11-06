@@ -292,3 +292,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## VPS unittest root fixture correction (2026-11-07)
 - VPS reported 107 tests, one ERROR in test_deployment_preflight.test_valid_permissions. Root-owned temporary directories were incorrectly checked with mocked effective UID 1000, producing a false owner mismatch. Corrected the test to use the actual UID; root must fail the non-root gate, while non-root fixtures may pass. No production permission policy was changed.
 - Fix commit ecf2c6e096bf86386e5ecc16b42693a347471b61; full post-fix CI/VPS rerun pending. Continue Phase 5 only after rerun passes.
+
+## Single-VPS finishing continuation (2026-11-07)
+- User reports 107 unit tests passed after root-fixture correction. Added agency/service_lifecycle.py continuous sequential serving: idle socket timeouts are retried, unexpected errors fail closed, and a stop predicate is testable. Added optional `--forever` to agency/single_vps_service.py (default one-shot unchanged).
+- Added tests/test_service_lifecycle.py and docs/SINGLE_VPS_DEPLOYMENT.md. New CI result is pending; no claim of full validation.
+- This is NOT completion of autonomous six-agent operation: current worker results are caller-supplied, credential provisioning is external, no independently isolated tool executor exists, and actual distinct-UID and restart acceptance remain untested on VPS. Never enable unsafe host command execution as a shortcut.
+- Next concrete acceptance: verify latest CI, provision dedicated local UIDs/group/secret with approved operator procedure, run one consolidated VPS acceptance for service lifecycle, UID isolation, database protection, and acknowledgements. Build autonomous AI/approval/tool capabilities separately behind sandbox gates. Single VPS only; no clustering.
