@@ -188,3 +188,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added agency/trusted_protocol.py: strict, size-bounded, data-only stage request parser; no listener, no execution, no credential minting.
 - Added tests/test_trusted_protocol.py covering valid input, invalid JSON and unexpected fields. Tests not yet verified.
 - IMPORTANT: this is only protocol preparation, NOT a process-isolated trusted server. A future server must authenticate peers, keep signing keys inaccessible to agents, and enforce replay/credential expiry and filesystem permissions. No agent tools enabled.
+
+## Phase 5I.3: Local trusted transport primitives (2026-11-06)
+- User reported 60 unit tests passing in 1.504s for the prior milestone.
+- Added agency/trusted_local_service.py: bounded single-request handler for an already accepted Unix-domain connection, with private owner-only socket-directory verification. Added tests/test_trusted_local_service.py for permission/symlink/input rejection.
+- IMPORTANT: This is NOT a running service, an authenticated peer-credential check, or process isolation. The handler relies on existing worker credential validation in TrustedAgentExecution. A separate trusted supervisor must securely create/bind the socket, validate peer OS identity, enforce file/key/database isolation, and limit connections before production use.
+- No agent tools enabled. New tests committed, not yet verified on VPS/CI.
+- Next: implement peer-credential checked socket server with lifecycle controls and tests, then an unprivileged agent client and LLM adapter.
