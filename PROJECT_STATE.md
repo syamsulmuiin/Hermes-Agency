@@ -162,3 +162,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_independent_sandbox.py with three regression tests. These tests are committed but CI/VPS results are not yet verified.
 - IMPORTANT: Docker candidate detection is not container isolation. Existing Bubblewrap probe remains unchanged; no independent executable backend exists yet.
 - Next: design a trusted privileged broker and strictly constrained container runner; verify daemon policy, mounts, network, user IDs, cgroups and side-effect fencing; run real non-root tests before enabling tools.
+
+## Phase 5H VPS check and Podman candidate (2026-11-06)
+- User reported unit tests OK and real independent discovery on VPS: Linux, Docker CLI absent, backend disabled, no tools enabled. Exact unit test count was not supplied.
+- Added Podman candidate discovery alongside Docker; neither CLI presence nor rootless label authorizes execution. Added regression test, not yet verified in CI/VPS.
+- Neither Docker nor Podman backend is implemented as an executor. Existing Bubblewrap probe is unchanged. Do not claim sandbox migration complete.
+- Next: test updated suite and inventory; evaluate supported rootless container isolation with real host tests. On restricted VPS, refuse unsafe host fallback.
