@@ -332,3 +332,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Full suite: 113 tests passed in 1.500 seconds; hermes-agency.service remained active.
 - Verified isolated trusted-issued worker credential, positive stage progression, SQLite close/reopen continuity, wrong identity/forged credential/approver-role denial. This does not yet prove positive cross-UID socket operation or systemd restart recovery.
 - Next acceptance: operator-controlled credential issuance outside worker, live socket positive test on dedicated test workflow, and restart persistence; no agent tools or production autonomy implied.
+
+## Prepared live cross-UID positive E2E test (2026-11-07)
+- Added deploy/live_positive_e2e.py. Root operator orchestrates separate hermes-trusted (task creation, short-lived credential issuance, SQLite verification) and hermes-worker (socket submission) processes. Signing key stays in trusted process; only worker credential crosses stdin; neither token nor signing key is logged or placed in argv/environment. It uses a dedicated test workflow in the existing SQLite database and does not run agent tools or restart the service.
+- Requires root to stage this standalone script outside /root (e.g. /tmp mode 0644) and /opt/hermes-agency code to be present. Test creates a durable audit/test workflow record; not a zero-write probe. Run only with explicit operator acceptance of this test data.
+- No live execution result yet. Pending VPS operator run and validation; do not claim cross-UID E2E passed before output.
