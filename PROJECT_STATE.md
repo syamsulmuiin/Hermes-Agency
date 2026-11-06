@@ -354,3 +354,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_sandbox_preflight.py: missing namespace prerequisites, simulated prerequisites, and invalid report all fail closed.
 - No actual sandbox runner, filesystem/network isolation, LLM or tool execution implemented. Tests not yet run on VPS. This checkpoint is NOT a finished independent sandbox or finished Hermes-Agency.
 - Next: implement and independently validate a real isolated runner, resource ceilings, filesystem/network denial and escape tests before any tool access; then integrate LLM/agent execution behind existing trusted boundary.
+
+## Rootless namespace sandbox probe implementation (2026-11-07)
+- Added agency/linux_sandbox.py: fixed, non-tool isolation probe running in a separate non-root process; Linux user, mount, UTS, IPC, network and PID namespaces, private mounts, empty tmpfs chroot, CPU/memory/file-size/FD limits and no_new_privs. It fails closed on any missing kernel permission or isolation check. No Docker, Podman or Bubblewrap.
+- Added tests/test_linux_sandbox.py for root refusal, invalid limits, denied isolation and forged evidence.
+- This is an actual attempted isolated *probe*, not a general agent command runner. No arbitrary agent code/tools, seccomp filter, cgroup enforcement, safe bind mounts or network policy are implemented. Rootless user namespaces may be disabled on the VPS. No live VPS isolation result or full suite result yet; do not claim readiness.
+- Next: run tests and live probe as hermes-worker from deployed Python module; verify namespace isolation and kernel policy, then implement narrowly allowlisted tools only after escape/resource tests and approvals.
