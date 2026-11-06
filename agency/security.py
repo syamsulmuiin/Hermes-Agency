@@ -93,6 +93,51 @@ class SecureAgencyStore(AgencyStore):
         except BaseException:
             self.db.rollback(); raise
     def handoff(self,task_id,sender,recipient,payload):
-        row=self.db.execute('SELECT status FROM tasks WHERE id=?',(task_id,)).fetchone()
-        if not row or row[0] not in ('pending','blocked'): raise PermissionError('Active task cannot hand off')
-        return super().handoff(task_id,sender,recipient,payload)
+        if sender not in AGENTS or recipient not in AGENTS or sender == recipient:
+            raise ValueError('Invalid handoff agents')
+        if not isinstance(payload,dict) or set(payload) != {'completed','output','notes','blockers'}:
+            raise ValueError('Invalid handoff schema')
+        if not all(isinstance(v,list) and len(v)<=100 and all(isinstance(x,str) and len(x)<=4096 for x in v) for v in payload.values()):
+            raise ValueError('Invalid handoff field types or sizes')
+        serialized=json.dumps(payload,ensure_ascii=False,allow_nan=False)
+        if len(serialized.encode())>65536: raise ValueError('Oversized handoff')
+        import uuid
+        handoff_id=str(uuid.uuid4())
+        self._start()
+        try:
+            row=self.db.execute('SELECT owner,status FROM tasks WHERE id=?',(task_id,)).fetchone()
+            if not row or row[0]!=sender or row[1] not in ('pending','blocked'):
+                raise PermissionError('Only idle current owner may hand off')
+            if self.db.execute('SELECT 1 FROM task_leases WHERE task_id=?',(task_id,)).fetchone():
+                raise PermissionError('Task has a lease')
+            self.db.execute('INSERT INTO handoffs(id,task_id,sender,recipient,payload) VALUES(?,?,?,?,?)',
+                            (handoff_id,task_id,sender,recipient,serialized))
+            self.db.execute("UPDATE tasks SET owner=?,status='pending' WHERE id=?",(recipient,task_id))
+            self._audit(task_id,'handoff',sender+'->'+recipient)
+            self.db.commit()
+            return handoff_id
+        except BaseException:
+            self.db.rollback()
+            raise
+
+    def decide_authenticated(self,approval,principal,allow):
+        """Use only a principal resolved by trusted authentication middleware."""
+        if not isinstance(principal,AuthenticatedReviewer):
+            raise PermissionError('Authenticated reviewer required')
+        if 'approver' not in principal.roles:
+            raise PermissionError('Approver role required')
+        return self.decide(approval,principal.identity,allow)
+
+class AuthenticatedReviewer:
+    """Opaque reviewer principal; instantiate only inside a trusted boundary.
+
+    This class alone is NOT a cryptographic authentication mechanism.
+    """
+    __slots__=('identity','roles')
+    def __init__(self,identity,roles):
+        if not isinstance(identity,str) or not identity.strip() or len(identity)>128:
+            raise ValueError('Invalid identity')
+        if not isinstance(roles,frozenset) or not roles <= frozenset({'approver','auditor'}):
+            raise ValueError('Invalid roles')
+        self.identity=identity
+        self.roles=roles
