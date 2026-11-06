@@ -39,6 +39,7 @@ def run_service(socket_path, state_dir, database, key_dir, client_gid,
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Single-VPS trusted one-shot worker")
+    parser.add_argument("--forever", action="store_true", help="Serve requests continuously")
     parser.add_argument("--socket", required=True)
     parser.add_argument("--state-dir", required=True)
     parser.add_argument("--database", required=True)
@@ -62,6 +63,11 @@ def main(argv=None):
             raise ValueError("Signing secret must be 64 raw bytes")
     finally:
         os.close(fd)
+    if args.forever:
+        from .service_lifecycle import serve_forever
+        return serve_forever(args.socket, args.state_dir, args.database,
+                             args.key_dir, args.client_gid,
+                             frozenset(args.allow_uid), secret)
     return run_service(args.socket, args.state_dir, args.database, args.key_dir,
                        args.client_gid, frozenset(args.allow_uid), secret)
 
