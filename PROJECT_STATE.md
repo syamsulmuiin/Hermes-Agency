@@ -320,3 +320,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS operator ran deploy/smoke_negative_auth.py as hermes-worker from a root-readable staging location under /tmp; INVALID_CREDENTIAL_DENIED=PASS, exit code 0, and hermes-agency.service remained active.
 - Initial attempt directly from /root/Hermes-Agency failed with permission denied, consistent with worker isolation; no security permissions were relaxed. Staging script was removed after test.
 - This proves only denial of that invalid credential via the live socket. Valid credential acceptance, mismatched agent identity, unauthorized UID, workflow persistence across restart, and reboot recovery remain unverified.
+
+## Positive trusted workflow integration test preparation (2026-11-07)
+- Added tests/test_positive_trusted_workflow.py with isolated temporary SQLite database and random ephemeral signing key. Credentials are issued by TrustedApprovalService in trusted test setup, not by worker input or public socket.
+- Tests cover valid worker stage acceptance, workflow persistence across closing/reopening the SQLite store, denial of wrong agent identity, denial of forged credential, and denial of approver-role credential. Denied stages must not advance workflow or create handoffs.
+- This is an in-process integration suite, not yet a live cross-UID Unix socket positive test or systemd restart test. GitHub CI/VPS test execution pending. Live service database and signing key are untouched.
+- Next gate: run tests; design operator-only credential provisioning and a live cross-UID test with a dedicated test workflow and no credential leakage or tool execution.
