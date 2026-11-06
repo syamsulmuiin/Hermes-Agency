@@ -124,6 +124,12 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - Extended sandbox regression assertion. Latest CI and VPS rerun for this fix are pending.
 - IMPORTANT: VPS test so far ran as root. A non-root test is mandatory before declaring Phase 5G validated.
 
+## Phase 5G VPS retest and regression fix (2026-11-06)
+- User ran real Bubblewrap probe on VPS as root: SUCCESS, {'isolated_probe': True, 'agent_tools_enabled': False, 'resource_limits': 'rlimit-probe-only'}.
+- The same VPS run completed 42 unit tests with 1 error: test_failed_isolation_denied mock omitted stderr after diagnostic improvement; this is a test-fixture error.
+- Updated tests/test_sandbox.py failed-process mock to include stderr (commit 47a32063). Fresh CI and VPS unit test results are pending.
+- Non-root VPS validation is still mandatory. No arbitrary agent tool execution is enabled.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
