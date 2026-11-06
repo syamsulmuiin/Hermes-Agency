@@ -29,31 +29,6 @@
 
 ---
 
-## Secure single-VPS runtime (experimental)
-
-The `development/foundation` branch also contains an **experimental trusted
-service**, separate from the original prompt-only templates. It has a
-persistent SQLite workflow, signed worker credentials, a protected Unix
-socket, and a non-root systemd deployment pattern. **It is not yet an
-autonomous six-agent AI service and is not production-ready.** Agent-selected
-shell commands, filesystem changes, deployments and network tools remain
-disabled. Independent sandbox isolation is not implemented.
-
-**Verified on the user's single VPS (2026-11-07):** 110 Python unit tests
-passed; the non-root systemd service was active; the dedicated worker UID
-could connect to the Unix socket but could not read the SQLite database or
-signing secret. This does **not** establish valid/invalid credential behavior
-on the VPS, unauthorized UID rejection, workflow recovery across restart, or
-autonomous task execution.
-
-For the exact security model, deployment layout, pending acceptance checks,
-and development handoff, see [Single-VPS Deployment](docs/SINGLE_VPS_DEPLOYMENT.md),
-[Security Boundaries](docs/SECURITY_BOUNDARIES.md), and
-[Project State](PROJECT_STATE.md). Original prompt templates remain usable
-independently of this experimental runtime.
-
----
-
 ## What is Hermes Agency?
 
 Hermes Agency is a **system prompt template** that transforms any LLM into a structured multi-agent team. It provides pre-built agent roles, governance rules, and workflow patterns for building AI-powered agencies.
