@@ -366,3 +366,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added agency/stale_socket.py and wired cross_uid_listener to attempt recovery only for a same-UID socket that refuses connection; regular files, symlinks, foreign-owner sockets, and accepting sockets are rejected. Added regression tests and updated existing expected exception.
 - Caveat: inode recheck does not make unlink atomic against a competing process. The single-instance systemd supervisor remains a required assumption; do not expose listener creation to untrusted concurrent callers.
 - Patch not yet deployed to /opt/hermes-agency or validated on VPS. Sandbox user namespaces remain denied by AppArmor policy; no global AppArmor changes authorized.
+
+## VPS acceptance and sandbox follow-up (2026-11-07)
+- Operator ran full regression suite: 126/126 PASS; installed stale socket patch into /opt/hermes-agency; PATCH_IMPORT=PASS; service active after restart; DEPLOYMENT=PASS. Backup: /tmp/hermes-rollback.et0mme. Live stale socket restart simulation not yet verified.
+- Rootless worker unshare --user --map-root-user true failed writing uid_map with EPERM; host has kernel.apparmor_restrict_unprivileged_userns=1. No global AppArmor changes authorized.
+- Corrected sandbox bug: host UID/GID must be captured before CLONE_NEWUSER, with regression guard. This change is committed but not yet validated on VPS. Sandbox remains probe-only, no agent tool execution and no verified isolation on this host.
