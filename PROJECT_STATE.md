@@ -249,3 +249,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - IMPORTANT: send_stage returning does NOT prove server accepted the stage; current server has no acknowledgement framing. Acknowledged authenticated protocol and separate-UID subprocess tests remain acceptance requirements.
 - User requested a single consolidated Phase 5 CI gate; continue using existing GitHub Actions full unittest suite. These new tests are committed but CI result is not yet confirmed.
 - Next: add bounded server acknowledgement protocol with no sensitive exception leakage; verify real distinct UID process connectivity and server-owned secret directory, then supervised lifecycle and consolidated acceptance.
+
+## Phase 5 consolidated: acknowledged transport (2026-11-07)
+- User reports prior GitHub Actions suite succeeded. Added agency/trusted_ack.py: bounded opaque accepted/denied response with no exception detail, tests/test_trusted_ack.py for accepted, denied and truncated acknowledgements.
+- Added send_stage_confirmed() to agency/trusted_client.py; updated serve_bounded(..., acknowledged=True) as opt-in, preserving the previous default for compatibility. A client only reports success after an explicit accepted response; missing/malformed/denied responses fail closed.
+- Code committed; new CI run not yet verified. This is NOT a production-grade authenticated server identity mechanism; socket path trust and deployment permissions remain critical. Cross-UID listener does not yet use the acknowledgement protocol. Separate OS-user integration and supervised service lifecycle remain outstanding; do not declare Phase 5 finished or enable agent tools.
+- Continue using one full GitHub Actions test suite rather than separate per-subphase user tests.
