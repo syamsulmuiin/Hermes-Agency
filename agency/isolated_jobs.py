@@ -59,7 +59,14 @@ def run_isolated_job(job, timeout=5):
     except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
         raise PermissionError("Isolated execution unavailable") from exc
     if result.returncode != 0:
-        raise PermissionError("Isolated job failed or isolation denied")
+        stderr = result.stderr.decode("utf-8", "replace")[:1024].lower()
+        if "loopback:" in stderr and "operation not permitted" in stderr:
+            reason = "network_namespace_loopback_denied"
+        elif "operation not permitted" in stderr or "permission denied" in stderr:
+            reason = "host_namespace_policy_denied"
+        else:
+            reason = "sandbox_process_failed"
+        raise PermissionError("Isolated job denied: " + reason)
     if len(result.stdout) > MAX_OUTPUT:
         raise PermissionError("Isolated output exceeds limit")
     return {"job": job, "exit_code": 0,
