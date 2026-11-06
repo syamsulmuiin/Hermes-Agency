@@ -43,6 +43,13 @@ def provision_approval(path, approval_id, job):
 def initialize_ledger(db_path):
     if os.geteuid() != 0:
         raise PermissionError("Root operator required")
+    if not os.path.isabs(db_path) or os.path.lexists(db_path):
+        raise PermissionError("New absolute ledger path required")
+    parent = os.lstat(os.path.dirname(db_path))
+    if not stat.S_ISDIR(parent.st_mode) or parent.st_uid != 0 or parent.st_mode & 0o022:
+        raise PermissionError("Unsafe ledger directory")
+    fd = os.open(db_path, os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    os.close(fd)
     db = sqlite3.connect(db_path)
     try:
         db.execute("CREATE TABLE IF NOT EXISTS approvals (id TEXT PRIMARY KEY, job TEXT NOT NULL, consumed INTEGER NOT NULL DEFAULT 0)")
@@ -111,12 +118,16 @@ def serve_once(path, trusted_uid, db_path):
     verify_private_ledger(db_path)
     if not os.path.isabs(path) or os.path.lexists(path):
         raise PermissionError("Unsafe broker socket path")
+    parent = os.lstat(os.path.dirname(path))
+    if parent.st_uid != 0 or parent.st_mode & 0o022 or not stat.S_ISDIR(parent.st_mode):
+        raise PermissionError("Unsafe broker socket path")
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     old = os.umask(0o177)
     try:
         listener.bind(path)
     finally:
         os.umask(old)
+    os.chmod(path, 0o600)
     listener.listen(1)
     listener.settimeout(10)
     try:
