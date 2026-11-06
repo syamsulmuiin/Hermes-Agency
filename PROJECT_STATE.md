@@ -337,3 +337,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added deploy/live_positive_e2e.py. Root operator orchestrates separate hermes-trusted (task creation, short-lived credential issuance, SQLite verification) and hermes-worker (socket submission) processes. Signing key stays in trusted process; only worker credential crosses stdin; neither token nor signing key is logged or placed in argv/environment. It uses a dedicated test workflow in the existing SQLite database and does not run agent tools or restart the service.
 - Requires root to stage this standalone script outside /root (e.g. /tmp mode 0644) and /opt/hermes-agency code to be present. Test creates a durable audit/test workflow record; not a zero-write probe. Run only with explicit operator acceptance of this test data.
 - No live execution result yet. Pending VPS operator run and validation; do not claim cross-UID E2E passed before output.
+
+## Live cross-UID positive E2E verified on VPS (2026-11-07)
+- Operator pulled commit 25db948 and ran deploy/live_positive_e2e.py using a root-readable staged copy. Output: CROSS_UID_VALID_CREDENTIAL=PASS, SQLITE_WORKFLOW_ADVANCED=PASS, LIVE_E2E=PASS, TEST_EXIT_CODE=0; hermes-agency.service remained active.
+- Verified trusted-only signing key access, short-lived worker credential passed to separate UID, authenticated live Unix socket submission, and persisted CEO-to-PM workflow transition in SQLite. This creates one durable test workflow record.
+- Still unverified: systemd restart persistence and reboot recovery. Independent sandbox, tool execution, LLM-driven agents and autonomous operations remain unimplemented.
