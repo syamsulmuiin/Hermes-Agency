@@ -392,3 +392,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS rootless Bubblewrap failed loopback RTM_NEWADDR and uid_map Permission denied. Do not weaken AppArmor or host namespace policy.
 - Added agency/systemd_jobs.py for two immutable diagnostic jobs through systemd-run transient services with DynamicUser, PrivateNetwork, strict filesystem protection, capabilities removed, runtime and resource limits. Root operator only; no sudo permissions granted to agents and no integration into trusted service.
 - Added six regression tests. VPS regression expected 149 tests; actual systemd-run validation pending. This is a constrained executor, NOT production-grade arbitrary agent execution; inspect transient unit properties and verify host filesystem/network isolation before enabling further capabilities.
+
+## Systemd acceptance and trusted admission (2026-11-07)
+- VPS confirmed 149 tests PASS; operator-only systemd noop and identity executed, DynamicUser UID 62210, trusted service active.
+- Added agency/systemd_acceptance.py: root-operated real transient service verifies non-root UID, /etc/shadow unreadable, /root inaccessible, /usr nonwritable, AF_INET socket denied; all must pass or acceptance fails. Still no claim of full PID/cgroup isolation, and acceptance is not an authorization token.
+- Added agency/trusted_job_admission.py: credential-verified, role-matched, explicit-approval-gated fixed-job admission returning admitted_not_executed; no root execution or new service endpoint. Integration is intentionally partial until an independently provisioned privileged broker and durable authorization/audit protocol exist.
+- Added six tests. VPS regression expected 155; real acceptance test pending. Production trusted service unchanged.
