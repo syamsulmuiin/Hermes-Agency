@@ -148,3 +148,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added `sandbox_capabilities()` reporting a safe disabled backend and machine-readable reason on unsupported/denied hosts; added three mock-based tests and documented usage.
 - No host security policies were changed. No fallback executor exists; this change does not make all VPS compatible or enable tools.
 - Pending: latest CI verification, real non-root report, design and implement independently secured alternate backend(s), per-backend runtime validation, cgroups/seccomp, tool-side fencing, trusted service boundary.
+
+
+## Verified VPS portability test (2026-11-06)
+- User executed `python3 -m unittest discover -s tests -v` on VPS: **45 tests, OK** (3.958 s).
+- User executed `sandbox_capabilities()` as non-root `nobody` on Linux x86_64: `bubblewrap_installed=True`, `backend=disabled`, `isolated_probe=False`, `agent_tools_enabled=False`, `reason=host_namespace_policy_or_isolation_denied`.
+- Verified: capability reporting fails closed and provides a portable diagnostic. Not verified: any functioning non-root isolated executor on this VPS or compatibility across all VPS.
+- Next: implement and test a genuinely isolated alternative backend under the same policy, or retain safe-only mode when none is available. No host policy changes or privileged agent execution.
