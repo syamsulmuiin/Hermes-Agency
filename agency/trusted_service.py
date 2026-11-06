@@ -9,14 +9,17 @@ import stat
 
 from .trusted_local_service import verify_private_socket_directory
 from .trusted_peer import serve_authenticated_peer
+from .trusted_ack import serve_with_ack
 
 
-def serve_bounded(path, boundary, allowed_uids, max_connections=1):
+def serve_bounded(path, boundary, allowed_uids, max_connections=1, acknowledged=False):
     """Accept a finite number of requests; reject failures without leaking details.
 
     An idle accept timeout terminates the service. This intentionally does not
     expose a public endpoint or implement background process management.
     """
+    if type(acknowledged) is not bool:
+        raise ValueError("Invalid acknowledgement mode")
     if type(max_connections) is not int or not 1 <= max_connections <= 100:
         raise ValueError("Invalid connection limit")
     if not isinstance(path, str) or not path or len(os.fsencode(path)) > 100:
@@ -44,8 +47,14 @@ def serve_bounded(path, boundary, allowed_uids, max_connections=1):
                 break
             with connection:
                 try:
-                    serve_authenticated_peer(connection, boundary, allowed_uids)
-                    accepted += 1
+                    if acknowledged:
+                        if serve_with_ack(connection, boundary, allowed_uids) == "accepted":
+                            accepted += 1
+                        else:
+                            denied += 1
+                    else:
+                        serve_authenticated_peer(connection, boundary, allowed_uids)
+                        accepted += 1
                 except (PermissionError, ValueError, TimeoutError, OSError):
                     denied += 1
         return {"accepted": accepted, "denied": denied}
