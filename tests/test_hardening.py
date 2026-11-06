@@ -1,6 +1,7 @@
 import tempfile,threading,unittest
 from pathlib import Path
 from agency.security import SecureAgencyStore,AuthenticatedReviewer
+from agency.trusted import TrustedApprovalService
 
 PAYLOAD={'completed':['reviewed'],'output':['brief'],'notes':[],'blockers':[]}
 class HardeningTests(unittest.TestCase):
@@ -19,7 +20,9 @@ class HardeningTests(unittest.TestCase):
   approval=self.store.request_approval(self.task,'deploy',{},'ceo')
   with self.assertRaises(PermissionError):self.store.decide_authenticated(approval,'admin',True)
   with self.assertRaises(PermissionError):self.store.decide_authenticated(approval,AuthenticatedReviewer('alice',frozenset({'auditor'})),True)
-  self.store.decide_authenticated(approval,AuthenticatedReviewer('alice',frozenset({'approver'})),True)
+  with self.assertRaises(PermissionError):self.store.decide_authenticated(approval,AuthenticatedReviewer('alice',frozenset({'approver'})),True)
+  auth=TrustedApprovalService(self.store,b'k'*32)
+  auth.decide(approval,auth.issue_credential('alice','approver'),True)
  def test_parallel_claim(self):
   barrier=threading.Barrier(2);results=[];lock=threading.Lock()
   def worker(i):
