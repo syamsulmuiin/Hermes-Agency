@@ -403,3 +403,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS confirmed 155/155 tests, five systemd acceptance checks PASS, trusted service active.
 - Added agency/systemd_broker.py: one-shot Unix peer UID check, strict fixed-job JSON, SQLite BEGIN IMMEDIATE one-time approval consumption before execution, durable started/completed/failed audit entries, systemd fixed-job executor. Five unit tests added; expected 160 tests, VPS validation pending.
 - SECURITY: Prototype only. No root service deployment, no approval issuance API, no agent integration. Ledger filesystem ownership, socket directory trust, durable approval provenance, crash recovery, connection response behavior and bounded service lifecycle require further hardening before production. Do not grant workers sudo or direct broker access.
+
+## Broker hardening milestone (2026-11-07)
+- VPS confirmed 160/160 tests and trusted service active before milestone.
+- Broker now rejects unsafe SQLite ledger ownership/modes before execution, adds root-only manual approval provisioning and Unix socket integration tests (peer UID, strict framing, replay, audit, disallowed job). Expected 167 tests; VPS validation pending.
+- IMPORTANT: still a non-production prototype. Ledger initialization is not yet hardened against permissive initial file creation, root-only approval provisioning is not cryptographically linked to TrustedApprovalService decisions, broker socket lifecycle is not deployed as a protected systemd unit, and no end-to-end trusted-service-to-root-broker execution is wired. Do not deploy or grant agent access. Next milestone must address these before production activation.
