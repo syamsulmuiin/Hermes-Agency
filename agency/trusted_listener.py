@@ -30,10 +30,12 @@ def listen_once(path, boundary, allowed_uids):
         raise ValueError("Explicit UID allowlist required")
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     bound = False
+    bound_inode = None
     try:
         listener.settimeout(3)
         listener.bind(path)
         bound = True
+        bound_inode = os.lstat(path).st_ino
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
         listener.listen(1)
         connection, _ = listener.accept()
@@ -46,7 +48,8 @@ def listen_once(path, boundary, allowed_uids):
             # If the pathname has been replaced, leave it for the supervisor.
             try:
                 info = os.lstat(path)
-                if stat.S_ISSOCK(info.st_mode) and info.st_uid == os.geteuid():
+                if (stat.S_ISSOCK(info.st_mode) and info.st_uid == os.geteuid()
+                    and info.st_ino == bound_inode):
                     os.unlink(path)
             except FileNotFoundError:
                 pass
