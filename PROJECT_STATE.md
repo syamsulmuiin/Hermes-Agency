@@ -58,6 +58,16 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - Security BLOCKED: issue_credential must only be called after real server-side authentication. Signing key is not provisioned. Python in-process access is not an isolation boundary. No tools are connected.
 - Next: verify CI and fix any failing tests; build authenticated API/session boundary with key rotation and protected storage; implement tool-side fencing/idempotency and sandbox; then orchestrator.
 
+## CI failure investigation (2026-11-06)
+- Inspected full job logs for runs 42194877358, 42194864762, 42194842942, 42194809266, and 42194791882.
+- All five jobs reached the unittest step; checkout and Python setup succeeded.
+- Root cause: tests from earlier commits expected insecure legacy decide()/consume()/decide_authenticated() paths to work. These APIs were intentionally disabled for security.
+- The latest committed tests/test_security.py and tests/test_hardening.py now use TrustedApprovalService and explicitly expect legacy rejection. These changes occurred after the listed failed runs.
+- Added malformed base64 credential handling and regression coverage.
+- Historical failed runs remain failed; a fresh workflow run on the latest commit is required to confirm resolution.
+- Node.js 20 deprecation warning from checkout@v4 and setup-python@v5 is non-fatal and separate from the test failures.
+- Do not re-enable insecure legacy approval paths to make tests green.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
