@@ -195,3 +195,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - IMPORTANT: This is NOT a running service, an authenticated peer-credential check, or process isolation. The handler relies on existing worker credential validation in TrustedAgentExecution. A separate trusted supervisor must securely create/bind the socket, validate peer OS identity, enforce file/key/database isolation, and limit connections before production use.
 - No agent tools enabled. New tests committed, not yet verified on VPS/CI.
 - Next: implement peer-credential checked socket server with lifecycle controls and tests, then an unprivileged agent client and LLM adapter.
+
+## Phase 5I.4: Kernel-verified Unix peer identity (2026-11-06)
+- User reported prior Phase 5I.3 tests OK, without a detailed count.
+- Added agency/trusted_peer.py: Linux SO_PEERCRED inspection and explicit UID allowlist check before delegating to the existing bounded stage handler. Added tests/test_trusted_peer.py for peer credentials and denied callers.
+- No daemon or remote endpoint exists. This is an optional trusted-server building block; it is NOT yet wired to a production listener. The current UID check is not a complete process isolation guarantee; same-UID processes and inherited descriptors remain threats. Deployment must use distinct OS identities and private key/DB permissions. Worker credentials remain mandatory.
+- Tests committed, not yet independently verified on VPS/CI. No tool execution enabled.
+- Next: design a supervised socket listener with peer UID enforcement, lifecycle controls and restricted response framing; test separate OS-user processes and replay/timeout behavior.
