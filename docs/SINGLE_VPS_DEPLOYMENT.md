@@ -63,9 +63,22 @@ runuser -u hermes-trusted -- sh -c 'cd /opt/hermes-agency && python3 -m agency.d
 ```
 
 These IDs describe the verified host only; do not assume they apply to
-another VPS. The `/run` directory was manually created; it may disappear
-after reboot. **Persistent boot-time creation of the exact owner/group/mode
-is still required** before claiming reliable reboot recovery.
+another VPS. The `/run` directory was manually created. A repository-managed tmpfiles
+configuration is now available at `deploy/hermes-agency.tmpfiles.conf`.
+It has **not yet been installed or reboot-tested** on the VPS. To install
+only after verifying the named accounts and group exist:
+
+```bash
+install -o root -g root -m 0644 /opt/hermes-agency/deploy/hermes-agency.tmpfiles.conf /etc/tmpfiles.d/hermes-agency.conf
+systemd-tmpfiles --create /etc/tmpfiles.d/hermes-agency.conf
+stat -c '%U %G %a %n' /run/hermes-agency
+```
+
+Expected: `hermes-trusted hermes-agents 710 /run/hermes-agency`.
+After updating the repository, deploy the new file to `/opt/hermes-agency`
+first; do not assume Git pull updates the running copy. Avoid deleting the
+socket directory while the service is active. A future reboot test is needed
+to verify boot-time recreation.
 
 ## Outstanding acceptance criteria
 
