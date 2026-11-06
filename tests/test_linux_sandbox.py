@@ -1,10 +1,25 @@
 """Fail-closed tests for Linux sandbox probe runner."""
 import unittest
+from unittest.mock import call
 from unittest.mock import patch
 from agency.linux_sandbox import run_isolated_probe
 
 
 class LinuxSandboxTests(unittest.TestCase):
+    def test_host_identity_captured_before_user_namespace(self):
+        from agency import linux_sandbox as sandbox
+        with patch.object(sandbox.sys, "platform", "linux"), \
+             patch.object(sandbox.os, "geteuid", return_value=1000), \
+             patch.object(sandbox.os, "getuid", return_value=1000) as uid, \
+             patch.object(sandbox.os, "getgid", return_value=1001) as gid, \
+             patch.object(sandbox, "_limits"), \
+             patch.object(sandbox, "_call", side_effect=RuntimeError("stop")) as syscall:
+            with self.assertRaisesRegex(RuntimeError, "stop"):
+                sandbox._child()
+            uid.assert_called_once()
+            gid.assert_called_once()
+            syscall.assert_called_once_with("unshare", sandbox.CLONE_NEWUSER)
+
     def test_rejects_invalid_timeout(self):
         for timeout in (0, 31, True, "3"):
             with self.assertRaises(ValueError):
