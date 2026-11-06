@@ -1,4 +1,5 @@
 import os
+from types import SimpleNamespace
 import tempfile
 import unittest
 from pathlib import Path
@@ -27,7 +28,10 @@ class BrokerProductionGatesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "ledger.sqlite"
             path.touch(mode=0o600)
-            with patch("agency.systemd_broker.os.geteuid", return_value=0):
+            actual = os.lstat(path)
+            invalid = SimpleNamespace(st_uid=995, st_mode=actual.st_mode,
+                                      st_nlink=actual.st_nlink)
+            with patch("agency.systemd_broker.os.lstat", side_effect=lambda candidate: invalid if str(candidate) == str(path) else os.stat(candidate)):
                 with self.assertRaises(PermissionError):
                     verify_private_ledger(str(path))
 
