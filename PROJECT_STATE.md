@@ -140,3 +140,11 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 
 ## Continuation prompt
 Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preserve upstream templates and scope constraints, then continue the next unfinished milestone. Report evidence, limitations, and blockers.
+
+
+## Cross-VPS portability checkpoint (2026-11-06)
+- User requires portable operation across VPS providers, without per-host AppArmor changes.
+- VPS evidence: Bubblewrap fixed probe succeeded as root; non-root failed with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`. Kernel audit recorded AppArmor userns transition to `unprivileged_userns`; unshare UID mapping failed with EPERM. Exact policy enforcement path is not fully established.
+- Added `sandbox_capabilities()` reporting a safe disabled backend and machine-readable reason on unsupported/denied hosts; added three mock-based tests and documented usage.
+- No host security policies were changed. No fallback executor exists; this change does not make all VPS compatible or enable tools.
+- Pending: latest CI verification, real non-root report, design and implement independently secured alternate backend(s), per-backend runtime validation, cgroups/seccomp, tool-side fencing, trusted service boundary.
