@@ -202,3 +202,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - No daemon or remote endpoint exists. This is an optional trusted-server building block; it is NOT yet wired to a production listener. The current UID check is not a complete process isolation guarantee; same-UID processes and inherited descriptors remain threats. Deployment must use distinct OS identities and private key/DB permissions. Worker credentials remain mandatory.
 - Tests committed, not yet independently verified on VPS/CI. No tool execution enabled.
 - Next: design a supervised socket listener with peer UID enforcement, lifecycle controls and restricted response framing; test separate OS-user processes and replay/timeout behavior.
+
+## Phase 5I.5: One-shot Unix listener prototype (2026-11-06)
+- User reports Phase 5I.4 tests OK; detailed counts unavailable.
+- Added agency/trusted_listener.py, a one-connection Unix socket listener that checks an existing owner-only directory, refuses existing paths, validates UID allowlist and delegates to SO_PEERCRED + worker credential gates. Cleanup checks socket inode before unlinking.
+- Added tests/test_trusted_listener.py covering existing pathname, invalid allowlist and malformed request over a real socket. New tests are committed but not yet verified on VPS/CI.
+- SECURITY LIMIT: this is a one-shot prototype, NOT a supervised production daemon. Private 0700 socket directory prevents cross-UID clients, so separate OS-user process tests are still pending. Same-UID untrusted processes may reach socket but still need a valid worker credential. No credential issuer endpoint or tool execution.
+- Next: test current suite, design controlled cross-UID socket access and trusted process startup with protected database and signing keys; test real separate OS users and crash/restart behavior before claiming isolation.
