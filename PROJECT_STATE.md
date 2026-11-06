@@ -223,3 +223,11 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_cross_uid_policy.py for denial of private directories, wrong groups and non-socket paths. New tests are committed but not yet verified on VPS.
 - IMPORTANT: This is a policy validator, NOT cross-UID communication. Existing listeners still require owner-only 0700 directory and socket 0600; no cross-UID listener is wired yet. A dedicated client group, distinct OS users, separate private key/database directories, and real cross-user tests are required before activation. Do not use a shared group for secrets.
 - Next: design an explicit cross-UID listener using a dedicated socket transport directory, keep key/DB directories 0700 server-only, and verify SO_PEERCRED + worker tokens with separate OS identities.
+
+## Phase 5 consolidated validation (2026-11-06)
+- User requested Phase 5 be treated as ONE integrated process rather than many small milestones, with ONE full test suite and commits. Do not ask for per-subphase manual tests.
+- Added tests/test_phase5_integration.py: single end-to-end local Unix socket test combining SO_PEERCRED UID gate, role-scoped worker credential, rejected wrong-agent credential, persisted workflow advancement and socket cleanup.
+- Existing GitHub Actions workflow already runs the entire unittest discovery suite on pushes to development/foundation. Use that workflow as the unified CI gate.
+- This integration test uses the same OS UID in one process with a separate server thread. It does NOT demonstrate distinct-user process isolation, protected signing keys against untrusted agents, persistent daemon lifecycle, or any tool execution.
+- Next consolidated Phase 5 acceptance: cross-UID real-process test with protected key/database ownership, authenticated agent client, audited broker denial tests and supervised service lifecycle; only then enable permitted effects. Keep shell execution disabled until isolated backend validated.
+- New integration test committed; CI result must be verified before claiming full suite success.
