@@ -310,3 +310,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Removed experimental single-VPS runtime sections from both README.md and README-id.md as requested. Detailed truthful runtime status remains in docs/SINGLE_VPS_DEPLOYMENT.md and PROJECT_STATE.md.
 - Added deploy/hermes-agency.tmpfiles.conf to recreate /run/hermes-agency at boot with 0710 hermes-trusted:hermes-agents; deployment guide now includes explicit installation instructions and cautions about /opt runtime copy. Not installed or reboot-tested yet.
 - No change to live VPS service or agent execution permissions. New GitHub Actions result pending. Next: consolidate cross-UID authenticated workflow and restart acceptance tests, then independently isolated agent execution; do not claim autonomy complete.
+
+## Live negative-auth smoke test preparation (2026-11-07)
+- Added deploy/smoke_negative_auth.py: a worker-UID, no-secret, no-task-creation live probe using a deliberately invalid credential and unknown task ID. Requires an explicit denied acknowledgement; retries short socket rebind gaps. Does not exercise valid credential acceptance or task state transitions.
+- Pending: user runs the script on VPS, verifies service remains active, then trusted-only operator provisioning and end-to-end positive workflow test can be designed without exposing signing secrets to workers.
+- The live /opt/hermes-agency service code has not been updated or restarted by these repository commits. No host test result is claimed.
