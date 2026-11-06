@@ -20,18 +20,16 @@ class DeploymentPreflightTests(unittest.TestCase):
             with open(database, "wb"):
                 pass
             os.chmod(database, 0o600)
-            with patch("agency.deployment_preflight.os.geteuid",
-                       return_value=os.geteuid() or 1000):
-                # Root-run CI is intentionally denied; non-root CI validates layout.
-                if os.geteuid() == 0:
-                    with self.assertRaises(PermissionError):
-                        verify_deployment(transport, state, database, keys,
-                                          os.getegid(), frozenset({1001}))
-                else:
-                    self.assertTrue(verify_deployment(
-                        transport, state, database, keys, os.getegid(),
-                        frozenset({os.geteuid() + 1})
-                    ))
+            if os.geteuid() == 0:
+                # Root-owned fixtures cannot pass the non-root service gate.
+                with self.assertRaises(PermissionError):
+                    verify_deployment(transport, state, database, keys,
+                                      os.getegid(), frozenset({1001}))
+            else:
+                self.assertTrue(verify_deployment(
+                    transport, state, database, keys, os.getegid(),
+                    frozenset({os.geteuid() + 1})
+                ))
 
     def test_root_denied(self):
         with patch("agency.deployment_preflight.os.geteuid", return_value=0):
