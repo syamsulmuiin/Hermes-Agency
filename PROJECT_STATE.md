@@ -100,6 +100,15 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - No network API, sandbox, or real tool execution is enabled. CI for the Phase 5D commits remains to be checked.
 - Next: validate latest CI; integrate keyring through a trusted server-only credential issuer, design persistent key storage and secure rotation procedure; implement sandbox before any external effects.
 
+## Phase 5E/5F: Integration, protected keys and sandbox probe (2026-11-06)
+- Added tests/test_keyring_integration.py covering approval flow with key rotation and legacy-token rejection.
+- Added agency/key_storage.py and tests/test_key_storage.py. Administrator-provisioned private key directory must be owner-only; key and manifest files are loaded with no-follow protections. No secret material is committed.
+- Added agency/sandbox.py and tests/test_sandbox.py. The only sandbox invocation is a fixed Linux bubblewrap /bin/true isolation probe. It is not an agent command runner, and does not allow arbitrary commands, network access, or writable host binds.
+- CI check of latest commit returned no combined status entries; this does not prove GitHub Actions success or failure. User must provide latest workflow run URL/ID for job-log verification, or inspect the Actions UI.
+- Sandbox has NOT been executed on the target Linux host; kernel/user namespace/bubblewrap support remain unknown.
+- SECURITY GATES STILL OPEN: runtime authorization is in-process, keyring persistence and rotation are administrator-managed, no authenticated remote service, no tool-side fencing or crash-safe idempotency, no resource-limit proof or isolated writable workspace. No external agent tools are enabled.
+- Next: verify latest CI logs, test bubblewrap probe on the target Linux host, harden sandbox resource controls, implement trusted service boundary and tool-side fencing before any real tool execution.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
