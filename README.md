@@ -29,6 +29,18 @@
 
 ---
 
+## Experimental secure runtime (development branch)
+
+The `development/foundation` branch includes an **experimental, non-executable**
+six-agent orchestration and security foundation. It is not production-ready
+and does not grant agents shell, filesystem write, deployment, or network tools.
+The Linux Bubblewrap capability probe runs only a fixed harmless command.
+See [Sandbox Validation](docs/SANDBOX_VALIDATION.md),
+[Security Boundaries](docs/SECURITY_BOUNDARIES.md), and
+[Project State](PROJECT_STATE.md) for test instructions and current limitations.
+
+---
+
 ## What is Hermes Agency?
 
 Hermes Agency is a **system prompt template** that transforms any LLM into a structured multi-agent team. It provides pre-built agent roles, governance rules, and workflow patterns for building AI-powered agencies.
