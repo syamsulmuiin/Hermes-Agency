@@ -4,7 +4,6 @@ This module executes only a fixed, harmless /bin/true inside a namespace.
 It does not establish production-grade resource isolation or tool-side fencing.
 """
 import os
-import stat
 import resource
 import shutil
 import subprocess
@@ -35,8 +34,12 @@ def sandbox_probe(timeout=5):
         raise RuntimeError('Unsupported /bin symlink layout')
     if not os.path.islink('/bin'):
         raise RuntimeError('Sandbox probe requires merged-/usr layout')
+    for link,target in (('/lib','usr/lib'),('/lib64','usr/lib64')):
+        if not os.path.islink(link) or os.readlink(link)!=target:
+            raise RuntimeError('Unsupported merged-/usr library layout')
     argv=[binary,'--die-with-parent','--new-session','--unshare-all',
           '--clearenv','--ro-bind','/usr','/usr','--symlink','usr/bin','/bin',
+          '--symlink','usr/lib','/lib','--symlink','usr/lib64','/lib64',
           '--proc','/proc','--dev','/dev','--tmpfs','/tmp',
           '--','/bin/true']
     try:
