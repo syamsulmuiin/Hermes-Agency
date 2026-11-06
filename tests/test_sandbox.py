@@ -25,6 +25,6 @@ class SandboxTests(unittest.TestCase):
                 self.assertEqual(run.call_args.kwargs['stdin'],__import__('subprocess').DEVNULL)
     def test_failed_isolation_denied(self):
         with patch('agency.sandbox.shutil.which',return_value='/usr/bin/bwrap'):
-            with patch('agency.sandbox.subprocess.run',return_value=SimpleNamespace(returncode=1)):
+            with patch('agency.sandbox.subprocess.run',return_value=SimpleNamespace(returncode=1,stderr=b'bwrap: simulated isolation failure')):
                 with self.assertRaisesRegex(RuntimeError,'exit 1'):
                     sandbox_probe()
