@@ -231,3 +231,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - This integration test uses the same OS UID in one process with a separate server thread. It does NOT demonstrate distinct-user process isolation, protected signing keys against untrusted agents, persistent daemon lifecycle, or any tool execution.
 - Next consolidated Phase 5 acceptance: cross-UID real-process test with protected key/database ownership, authenticated agent client, audited broker denial tests and supervised service lifecycle; only then enable permitted effects. Keep shell execution disabled until isolated backend validated.
 - New integration test committed; CI result must be verified before claiming full suite success.
+
+## Phase 5 CI regression fix (2026-11-06)
+- GitHub Actions run 42221295528 job 127903716647: 76 tests, 1 failure in test_phase5_integration.py. Root cause: SQLite connection created in main thread, used by trusted server thread (sqlite3.ProgrammingError).
+- Fixed test to run serve_bounded on SQLite-owning main thread and move only socket client I/O to a background thread. No SQLite thread-safety override, security weakening, or production workflow changes.
+- Fix commit bb687c41e2a8bba214075361a6a084364c89f472; new CI result pending verification. Continue using one full Phase 5 CI suite, not repeated manual per-subphase tests.
