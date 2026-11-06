@@ -40,6 +40,14 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - WARNING: lease tokens prevent stale task completion, but cannot stop external side effects from an already-running worker. Tool-side fencing and idempotency are required.
 - No LLM integration, tool execution, deployment, or upstream modification.
 
+## Phase 3: Atomic handoff and test automation (2026-11-06)
+- Reworked SecureAgencyStore.handoff into a BEGIN IMMEDIATE transaction with owner/status/lease validation and bounded structured payloads.
+- Added tests/test_hardening.py for concurrent claims, stale owner handoff, payload bounds and reviewer role gate.
+- Added .github/workflows/foundation-tests.yml to run unittest on development/foundation pushes and main pull requests.
+- Added docs/SECURITY_BOUNDARIES.md describing remaining trust-boundary and execution limitations.
+- CI results have not been confirmed. Do not claim that the committed tests pass until a run is inspected.
+- The AuthenticatedReviewer object is forgeable in-process and legacy decide() still accepts a reviewer string. Approval remains unsafe for real tools.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
