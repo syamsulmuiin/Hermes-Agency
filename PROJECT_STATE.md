@@ -92,6 +92,14 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - Never expose LocalOperatorGate or TrustedApprovalService.issue_credential to an agent. No real tools are connected.
 - CI for Phase 5C commits remains unverified. Next: confirm tests, add hardened authenticated service boundary, secret lifecycle and OS-enforced sandbox; only then tool-side fenced execution.
 
+## Phase 5D: Versioned key lifecycle foundation (2026-11-06)
+- User reported previous Actions run completed; its exact run ID and logs were not provided, so successful completion of Phase 5C cannot be independently verified here.
+- Added agency/keyring.py: in-memory versioned HMAC credential signing, explicit active-key rotation, retirement/revocation, role/audience/expiry validation, and fail-closed malformed-token rejection.
+- Added tests/test_keyring.py covering rotation, old-key grace, retirement, tampering, role mismatch, expiry and invalid operations.
+- New keyring is NOT yet integrated with TrustedApprovalService, operator gate, or persistent protected key storage; existing v1 credentials remain unchanged.
+- No network API, sandbox, or real tool execution is enabled. CI for the Phase 5D commits remains to be checked.
+- Next: validate latest CI; integrate keyring through a trusted server-only credential issuer, design persistent key storage and secure rotation procedure; implement sandbox before any external effects.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
