@@ -255,3 +255,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added send_stage_confirmed() to agency/trusted_client.py; updated serve_bounded(..., acknowledged=True) as opt-in, preserving the previous default for compatibility. A client only reports success after an explicit accepted response; missing/malformed/denied responses fail closed.
 - Code committed; new CI run not yet verified. This is NOT a production-grade authenticated server identity mechanism; socket path trust and deployment permissions remain critical. Cross-UID listener does not yet use the acknowledgement protocol. Separate OS-user integration and supervised service lifecycle remain outstanding; do not declare Phase 5 finished or enable agent tools.
 - Continue using one full GitHub Actions test suite rather than separate per-subphase user tests.
+
+## Phase 5 consolidated: acknowledged cross-UID listener integration (2026-11-07)
+- User reports previous GitHub Actions success. Cross-UID one-shot listener now supports optional acknowledged=True, preserving previous default behavior. The trusted service sends only accepted/denied and does not leak internal exception text.
+- Added tests/test_cross_uid_ack_integration.py to exercise accepted and denied socket requests, stage advancement only on acceptance, and socket cleanup. IMPORTANT: these tests MOCK kernel peer UID to exercise policy; they do not establish actual cross-UID OS isolation. New CI result pending.
+- Final Phase 5 acceptance still requires actual separate-UID processes on VPS, verified private signing-key/SQLite permissions, and service lifecycle behavior. No agent tool execution enabled. Ask user for one consolidated VPS test only after the implementation and CI gate are ready.
