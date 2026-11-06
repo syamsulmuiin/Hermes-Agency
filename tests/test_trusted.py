@@ -22,6 +22,9 @@ class TrustedBoundaryTests(unittest.TestCase):
   with self.assertRaises(PermissionError):self.auth.decide(a,token[:-2]+'XX',True)
   self.now[0]+=2
   with self.assertRaises(PermissionError):self.auth.decide(a,token,True)
+ def test_malformed_base64_is_denied(self):
+  a=self.s.request_approval(self.task,'deploy',{},'developer')
+  with self.assertRaises(PermissionError):self.auth.decide(a,'%%%%.%%%%',True)
  def test_wrong_role_and_worker(self):
   a=self.s.request_approval(self.task,'deploy',{},'developer')
   worker=self.auth.issue_credential('worker','worker')
