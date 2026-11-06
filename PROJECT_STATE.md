@@ -117,6 +117,13 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - Phase 5G CI and actual VPS isolation are NOT YET VERIFIED. Request latest run and host output before claiming completion.
 - No real tool execution. Outstanding: trusted process separation, OS-specific namespace verification, cgroup limits, tool-side fencing and crash-safe idempotency.
 
+## Phase 5G VPS diagnostic (2026-11-06)
+- First actual VPS probe failed: bwrap execvp /bin/true: No such file or directory.
+- VPS output confirms merged-/usr: /bin -> usr/bin, /lib -> usr/lib, /lib64 -> usr/lib64; /usr/bin/true exists.
+- Updated sandbox mount layout to bind /usr read-only and recreate the three links inside sandbox. Unsupported layouts fail closed.
+- Extended sandbox regression assertion. Latest CI and VPS rerun for this fix are pending.
+- IMPORTANT: VPS test so far ran as root. A non-root test is mandatory before declaring Phase 5G validated.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
