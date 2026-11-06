@@ -168,3 +168,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added Podman candidate discovery alongside Docker; neither CLI presence nor rootless label authorizes execution. Added regression test, not yet verified in CI/VPS.
 - Neither Docker nor Podman backend is implemented as an executor. Existing Bubblewrap probe is unchanged. Do not claim sandbox migration complete.
 - Next: test updated suite and inventory; evaluate supported rootless container isolation with real host tests. On restricted VPS, refuse unsafe host fallback.
+
+## Phase 5H.3: Portable tool-free runtime (2026-11-06)
+- VPS user reports unit tests OK and independent backend discovery shows neither Docker nor Podman CLI installed. No isolated executor is available.
+- Added agency/portable_runtime.py as a small wrapper around the existing persisted WorkflowCoordinator; workflow availability is independent of sandbox availability, while external tools remain disabled.
+- Added three unit tests for type validation, disabled sandbox capability reporting, and delegation. Tests committed but not yet independently executed on VPS/CI.
+- SECURITY LIMIT: this is not an LLM runtime; submit_stage_result is internal-only and unauthenticated. Do not expose it to remote callers. No real agent execution, shell, network, or filesystem tools are enabled.
+- Next: validate tests; add authenticated trusted service boundary; implement sandboxed tool broker with actual isolation validation before enabling external effects.
