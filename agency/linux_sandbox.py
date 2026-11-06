@@ -59,6 +59,8 @@ def _child():
     if sys.platform != "linux" or os.geteuid() == 0:
         raise PermissionError("Rootless Linux worker required")
     _limits()
+    # Capture host IDs before entering the unmapped user namespace.
+    host_uid, host_gid = os.getuid(), os.getgid()
     _call("unshare", CLONE_NEWUSER)
     _write("/proc/self/setgroups", "deny")
     _write("/proc/self/uid_map", "0 %d 1\n" % os.getuid())
