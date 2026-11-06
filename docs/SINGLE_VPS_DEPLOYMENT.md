@@ -1,41 +1,87 @@
-# Single-VPS trusted service deployment (draft; not yet production-accepted)
+# Single-VPS trusted service deployment and acceptance
 
-This is a **single-host** architecture. The trusted service and agent workers
-use different local Linux UIDs, not different VPS instances. Never run the
-trusted service as root, expose its socket over TCP, or grant workers access
-to the trusted state directory.
+**Status:** Experimental trusted runtime, not production-approved and not autonomous.
+One active VPS only. Linux identities separate local processes, not hosts.
 
-## Supervisor
+## Verified host checkpoint — 2026-11-07
 
-The runner supports `python3 -m agency.single_vps_service --forever`.
-A supervisor such as systemd should launch it under a dedicated non-root
-service account, with an explicit `User=`, `Group=`, `WorkingDirectory=`,
-`ExecStart=`, `Restart=on-failure`, and `NoNewPrivileges=yes`.
-The command requires `--socket`, `--state-dir`, `--database`,
-`--key-dir`, `--client-gid`, `--allow-uid`, and `--secret-file`.
-Do not copy placeholder UID/GID or paths into production.
+On Ubuntu x86_64, Python 3.12.3, systemd 255, branch
+`development/foundation` at commit `6f8c37c`:
 
-The trusted state and key directories must be owned by the service UID and
-mode 0700; SQLite database and the raw 64-byte signing secret must be 0600.
-The separate socket directory must be service-owned, dedicated-client-group
-owned, mode 0710; the socket is created 0660. Keep the trusted state outside
-the socket directory. Do not grant workers access to secret material.
+- 110/110 Python unit tests passed.
+- `hermes-agency.service` was enabled and active under non-root
+  `hermes-trusted` (UID 997), with group `hermes-agents` (GID 987).
+- `hermes-worker` (UID 995) connected to the Unix socket.
+- The worker was denied reading `agency.db` and `signing.key`.
+- The socket had owner/group `hermes-trusted:hermes-agents`, mode 0660.
 
-Use `python3 -m agency.deployment_preflight` as a read-only permissions
-check **under the intended service account** before startup.
+**Not verified on host:** authenticated valid/invalid worker messages,
+unauthorized peer UID, persisted workflow across restart, systemd failure
+recovery, independent sandbox, model-driven autonomous agent execution.
+A bare socket connection is not an authenticated workflow request.
 
-## Acceptance gate
+## Installed layout
 
-1. CI unit tests pass, including lifecycle and protected startup tests.
-2. A separate, unprivileged client UID can connect using a valid
-   worker credential and receives an explicit acknowledgement.
-3. Wrong UID and wrong worker credential are rejected, without a workflow
-   transition; the client cannot read trusted SQLite or signing secrets.
-4. The supervisor survives idle periods, restarts on unexpected failure,
-   and preserves SQLite workflow state across restart.
-5. No shell, filesystem mutation, network tool, or independent sandbox is
-   enabled until the independent sandbox has its own isolation proof.
+| Resource | Owner / group | Mode |
+|---|---|---|
+| `/var/lib/hermes-agency` | trusted / trusted | 0700 |
+| `/var/lib/hermes-agency/keys` | trusted / trusted | 0700 |
+| `/var/lib/hermes-agency/agency.db` | trusted / trusted | 0600 |
+| `/var/lib/hermes-agency/keys/signing.key` | trusted / trusted | 0600 |
+| `/run/hermes-agency` | trusted / agents | 0710 |
+| `/run/hermes-agency/trusted.sock` | trusted / agents | 0660 |
+| `/opt/hermes-agency` | root / root | non-writable by agents |
 
-This document is **not** evidence that the above host-level tests passed.
-The trusted service currently processes authenticated, caller-supplied
-structured stage results; it does not autonomously generate six-agent work.
+The signing secret contains 64 **raw** random bytes; never commit, print, or
+send it. Do not regenerate it over an existing file: old signed credentials
+would become invalid. The original repository remains in
+`/root/Hermes-Agency`; the running service uses a separate copy in
+`/opt/hermes-agency`. A Git pull alone does **not** deploy new runtime code.
+
+## Service operation
+
+```bash
+systemctl status hermes-agency.service --no-pager
+journalctl -u hermes-agency.service -n 50 --no-pager
+systemctl is-active hermes-agency.service
+```
+
+The service runs as `User=hermes-trusted`, `Group=hermes-agents`,
+`UMask=0077`, with `ProtectSystem=strict`, `ProtectHome=yes`,
+`NoNewPrivileges=yes`, and narrow `ReadWritePaths`. Its entry point is
+`python3 -m agency.single_vps_service --forever`, with explicit socket,
+state, database, key directory, client GID, allowed UID and secret file.
+`Restart=on-failure` is enabled. Runtime code changes require controlled
+redeployment and restart; do not change a live installation blindly.
+
+### Preflight
+
+Run the read-only check **as the trusted account**, with real local IDs:
+
+```bash
+runuser -u hermes-trusted -- sh -c 'cd /opt/hermes-agency && python3 -m agency.deployment_preflight --transport-dir /run/hermes-agency --state-dir /var/lib/hermes-agency --database /var/lib/hermes-agency/agency.db --key-dir /var/lib/hermes-agency/keys --client-gid 987 --allow-uid 995'
+```
+
+These IDs describe the verified host only; do not assume they apply to
+another VPS. The `/run` directory was manually created; it may disappear
+after reboot. **Persistent boot-time creation of the exact owner/group/mode
+is still required** before claiming reliable reboot recovery.
+
+## Outstanding acceptance criteria
+
+1. A real worker UID submits a correctly signed, role-scoped stage request
+   and receives an accepted acknowledgement with the expected persisted
+   workflow transition.
+2. Wrong credential and unauthorized UID fail without changing workflow.
+3. Database and signing key remain inaccessible to worker and other users.
+4. Restart preserves a nontrivial task state; service restarts on failure;
+   boot recreates the socket directory securely.
+5. Independent OS-enforced sandbox passes resource, filesystem, process,
+   and network isolation tests before any agent-selected tool is enabled.
+6. Six model-driven agents perform an authorized end-to-end task with
+   approval and QA evidence.
+
+The first four validate the trusted service only. The last two are
+**not implemented** and cannot be inferred from unit tests or a running
+systemd service. Never bypass these gates by running commands directly on
+the host as the agent.
