@@ -4,6 +4,7 @@ This module executes only a fixed, harmless /bin/true inside a namespace.
 It does not establish production-grade resource isolation or tool-side fencing.
 """
 import os
+import stat
 import resource
 import shutil
 import subprocess
@@ -26,9 +27,16 @@ def sandbox_probe(timeout=5):
     binary=shutil.which('bwrap')
     if binary is None or not os.path.isabs(binary):
         raise RuntimeError('bubblewrap not installed')
-    # The sandbox cannot receive user-selected commands, paths or environment.
+    # /bin is a symlink to /usr/bin on merged-/usr systems. Bind /usr only,
+    # then recreate /bin as a symlink inside the isolated root.
+    if not os.path.isfile('/usr/bin/true') or not os.access('/usr/bin/true',os.X_OK):
+        raise RuntimeError('Required system executable missing')
+    if os.path.islink('/bin') and os.readlink('/bin') != 'usr/bin':
+        raise RuntimeError('Unsupported /bin symlink layout')
+    if not os.path.islink('/bin'):
+        raise RuntimeError('Sandbox probe requires merged-/usr layout')
     argv=[binary,'--die-with-parent','--new-session','--unshare-all',
-          '--clearenv','--ro-bind','/bin','/bin','--ro-bind','/usr','/usr',
+          '--clearenv','--ro-bind','/usr','/usr','--symlink','usr/bin','/bin',
           '--proc','/proc','--dev','/dev','--tmpfs','/tmp',
           '--','/bin/true']
     try:
