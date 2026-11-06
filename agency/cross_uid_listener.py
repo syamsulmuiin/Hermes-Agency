@@ -13,6 +13,7 @@ from .cross_uid_policy import verify_cross_uid_transport
 from .trusted_peer import serve_authenticated_peer
 from .trusted_ack import serve_with_ack
 from .private_state import verify_private_state
+from .stale_socket import recover_stale_socket
 
 
 def serve_cross_uid_once(path, boundary, allowed_uids, client_gid, acknowledged=False, trusted_state=None):
@@ -38,7 +39,7 @@ def serve_cross_uid_once(path, boundary, allowed_uids, client_gid, acknowledged=
         or folder.st_gid != client_gid or stat.S_IMODE(folder.st_mode) != 0o710):
         raise PermissionError("Transport directory not pre-provisioned")
     if os.path.lexists(path):
-        raise FileExistsError("Refusing existing socket path")
+        recover_stale_socket(path)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     inode = None
     try:
