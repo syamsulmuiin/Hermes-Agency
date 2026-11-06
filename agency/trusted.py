@@ -11,6 +11,7 @@ import math
 import secrets
 import time
 from .security import fingerprint, ACTIONS
+from .keyring import RotatingCredentialKeys
 
 def _encode(raw):
     return base64.urlsafe_b64encode(raw).rstrip(b'=').decode('ascii')
@@ -21,11 +22,14 @@ def _decode(value):
     return base64.urlsafe_b64decode(value + '='*(-len(value)%4))
 
 class TrustedApprovalService:
-    def __init__(self,store,secret,clock=None):
+    def __init__(self,store,secret,clock=None,keyring=None):
+        if keyring is not None and not isinstance(keyring,RotatingCredentialKeys):
+            raise TypeError('Invalid credential keyring')
         if not isinstance(secret,bytes) or len(secret)<32:
             raise ValueError('A private signing key of at least 32 bytes is required')
         self.store=store
         self._secret=secret
+        self._keyring=keyring
         self.clock=clock or time.time
         self.store.db.execute('''CREATE TABLE IF NOT EXISTS execution_grants(
             idempotency_key TEXT PRIMARY KEY,
@@ -45,12 +49,16 @@ class TrustedApprovalService:
             raise ValueError('Invalid identity')
         if role not in ('approver','worker') or type(ttl) not in (int,float) or not 1<=ttl<=3600:
             raise ValueError('Invalid role or lifetime')
+        if self._keyring is not None:
+            return self._keyring.issue(identity,role,ttl)
         body={'sub':identity,'role':role,'exp':self.clock()+ttl,'nonce':secrets.token_hex(16),'aud':'hermes-agency-v1'}
         raw=json.dumps(body,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
         signature=hmac.new(self._secret,raw,hashlib.sha256).digest()
         return _encode(raw)+'.'+_encode(signature)
 
     def _verify(self,credential,role):
+        if self._keyring is not None:
+            return self._keyring.verify(credential,role)
         try:
             body,signature=credential.split('.')
             raw=_decode(body)
