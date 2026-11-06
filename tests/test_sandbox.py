@@ -15,6 +15,8 @@ class SandboxTests(unittest.TestCase):
                 args=run.call_args.args[0]
                 self.assertIn('--unshare-all',args)
                 self.assertIn('--clearenv',args)
+                self.assertIn('--symlink',args)
+                self.assertIn('usr/lib64',args)
                 self.assertEqual(args[-1],'/bin/true')
                 self.assertFalse(result['agent_tools_enabled'])
                 self.assertEqual(result['resource_limits'],'rlimit-probe-only')
