@@ -31,6 +31,15 @@ Develop a secure, persistent, testable multi-agent runtime while preserving the 
 - No handoff idempotency, payload size bounds, or audit integrity guarantees.
 - Local tests are not a production security assessment.
 
+## Phase 2: Security primitives (2026-11-06)
+- Added agency/security.py: SQLite atomic task claims, expiring leases, fencing tokens, guarded state transitions, persisted single-use approvals bound to task/action/parameter digest.
+- Added tests/test_security.py covering lease expiry, duplicate claims, stale tokens, unauthorized transitions, approval replay, denial, expiry, and restart.
+- Local prototype of the same design passed six tests before upload. GitHub Actions verification of the committed files has not yet run.
+- WARNING: caller-provided reviewer identities are not authenticated; approval must NOT authorize real tools yet.
+- WARNING: task handoff guard is not yet transactionally integrated with the base handoff; concurrency hardening is still required.
+- WARNING: lease tokens prevent stale task completion, but cannot stop external side effects from an already-running worker. Tool-side fencing and idempotency are required.
+- No LLM integration, tool execution, deployment, or upstream modification.
+
 ## Next milestones
 1. Add transition graph and owner-aware authorization.
 2. Add idempotency keys and transactional task claiming.
