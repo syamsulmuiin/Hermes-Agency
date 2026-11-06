@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from agency.systemd_broker import handle_connection, provision_approval, verify_private_ledger
+from agency.systemd_broker import handle_connection, provision_approval, verify_private_ledger, execute_approved as original_execute_approved
 
 
 class BrokerBoundaryTests(unittest.TestCase):
@@ -43,8 +43,12 @@ class BrokerBoundaryTests(unittest.TestCase):
                 thread = threading.Thread(target=server)
                 thread.start()
                 with b:
-                    b.sendall(payload)
-                    b.shutdown(socket.SHUT_WR)
+                    try:
+                        b.sendall(payload)
+                        b.shutdown(socket.SHUT_WR)
+                    except BrokenPipeError:
+                        # Expected if peer identity is rejected before reading.
+                        pass
                     try:
                         result["reply"] = b.recv(2048)
                     except OSError:
@@ -54,12 +58,12 @@ class BrokerBoundaryTests(unittest.TestCase):
         return result
 
     def fake_execute(self, path, token, job):
-        from agency.systemd_broker import execute_approved
-        return execute_approved(path, token, job, executor=lambda name: {"job":name,"exit_code":0})
+        return original_execute_approved(path, token, job, executor=lambda name: {"job":name,"exit_code":0})
 
     def test_socket_success_and_replay_denial(self):
         payload = (json.dumps({"job":"noop","approval_id":"x"*32})+"\n").encode()
         first = self.send(payload)
+        self.assertNotIn("error", first, repr(first.get("error")))
         self.assertEqual(first["value"]["exit_code"], 0)
         self.assertIn(b'"exit_code": 0', first["reply"])
         second = self.send(payload)
