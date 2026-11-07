@@ -66,3 +66,22 @@ def recover_fenced_units(*, broker_stopped, runner=subprocess.run,
     if failures:
         raise PermissionError("One or more fenced units remain unverified")
     return units
+
+
+def main(argv=None):
+    """CLI for an explicitly installed systemd broker lifecycle drop-in.
+
+    Both ExecStartPre and ExecStopPost run outside the broker's main process.
+    The drop-in is not installed by this module.
+    """
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--broker-stopped", action="store_true", required=True)
+    args = parser.parse_args(argv)
+    recovered = recover_fenced_units(broker_stopped=args.broker_stopped)
+    print("fenced_unit_recovery_verified=" + str(len(recovered)), flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
