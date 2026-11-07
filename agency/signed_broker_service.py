@@ -3,6 +3,7 @@
 This module never exposes legacy operator approvals over the signed socket.
 """
 import json
+import pwd
 import os
 import socket
 import stat
@@ -59,8 +60,12 @@ def serve_signed_once(socket_path, trusted_uid, trusted_gid, ledger_path,
     The parent directory MUST be root-owned and traversable by trusted UID,
     but not accessible by the worker. No automatic production activation.
     """
-    if os.geteuid() != 0 or min(trusted_uid, trusted_gid) <= 0:
+    if (os.geteuid() != 0 or type(trusted_uid) is not int
+            or type(trusted_gid) is not int or min(trusted_uid, trusted_gid) <= 0):
         raise PermissionError("Root and dedicated trusted identity required")
+    identity = pwd.getpwuid(trusted_uid)
+    if identity.pw_gid != trusted_gid:
+        raise PermissionError("Broker group must be trusted primary group")
     verify_private_ledger(ledger_path)
     key = read_broker_key(key_path, trusted_uid, trusted_gid)
     if not os.path.isabs(socket_path) or os.path.lexists(socket_path):
