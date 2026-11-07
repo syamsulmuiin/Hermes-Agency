@@ -81,3 +81,59 @@ def supervised_fenced_unit(job, grant_id, fence_socket, runner):
         raise
     stop_and_verify_unit(unit)
     return result
+
+
+def run_fenced_systemd_unit(job, fence_socket, unit):
+    """Opt-in fixed-job systemd-run with live fence monitoring.
+
+    A failure raises; supervised_fenced_unit always stops/verifies the unit.
+    This does not protect against abrupt death of the root broker itself:
+    a persistent watchdog/recovery unit is still required for production.
+    """
+    import os
+    import select
+    import socket
+    from .systemd_jobs import JOBS, PROPERTIES
+    _unit_name(unit)
+    if type(job) is not str or job not in JOBS:
+        raise PermissionError("Job not allowlisted")
+    if not isinstance(fence_socket, socket.socket) or os.geteuid() != 0:
+        raise PermissionError("Root broker and live fence required")
+    argv = ["/usr/bin/systemd-run", "--system", "--wait", "--collect",
+            "--quiet", "--unit=" + unit]
+    for prop in PROPERTIES:
+        argv.extend(("--property", prop))
+    argv.extend(("--", *JOBS[job]))
+    try:
+        proc = subprocess.Popen(
+            argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, close_fds=True, start_new_session=True,
+            env={"PATH": "/usr/bin"})
+    except OSError as exc:
+        raise PermissionError("Systemd-run unavailable") from exc
+    deadline = time.monotonic() + 12
+    try:
+        while time.monotonic() < deadline:
+            readable, _, exceptional = select.select(
+                [fence_socket], [], [fence_socket], 0.05)
+            if readable or exceptional:
+                try:
+                    incoming = fence_socket.recv(
+                        1, socket.MSG_PEEK | socket.MSG_DONTWAIT)
+                except OSError as exc:
+                    raise PermissionError("Fence monitor unavailable") from exc
+                if not incoming:
+                    raise PermissionError("Fence disconnected during systemd job")
+                raise PermissionError("Unexpected fence traffic during systemd job")
+            status = proc.poll()
+            if status is not None:
+                if status != 0:
+                    raise PermissionError("Systemd fixed job failed")
+                return {"job": job, "exit_code": 0,
+                        "stdout": "", "isolated_backend": "systemd",
+                        "agent_tools_enabled": False}
+        raise PermissionError("Systemd fixed job timeout")
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait()
