@@ -1073,3 +1073,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## One-command integrated isolated acceptance suite candidate (2026-11-07)
 - Added `agency/real_integrated_crash_suite_test.py` (commit e186d53), sequentially invokes four existing real VPS scenarios using isolated transient systemd units and private SQLite databases: trusted IPC stop-before-unlock; actual non-root sidecar SIGKILL; actual root supervisor SIGKILL; injected cleanup failure plus systemd ExecStartPre pending/verified gate. Checks each scenario's expected PASS markers and exit code, fails fast, prints `INTEGRATED_ISOLATED_CRASH_SUITE=PASS` only after all pass.
 - Not yet executed on VPS as a combined suite. This is test orchestration, NOT production wiring. `PRODUCTION_INTEGRATION_VERIFIED=NO` intentionally remains until all actual production launch paths, independent watchdog lifecycle and restart ordering are audited and explicitly authorized for change. No production files/services touched.
+
+
+## Integrated isolated crash suite VPS PASS (2026-11-07)
+- Operator ran `python3 -m agency.real_integrated_crash_suite_test --execute` on VPS after fast-forward to `1987fe2`; exit `INTEGRATED_EXIT_CODE=0` and `systemctl is-active hermes-agency.service` returned `active`.
+- `trusted_ipc`: PASS (572ms), `sidecar_sigkill`: PASS (987ms; SQLite unlock 2ms, recovery 121ms), `supervisor_sigkill`: PASS (1104ms; SQLite unlock 54ms, recovery 123ms), `cleanup_restart`: PASS (1295ms). Intentional PermissionError tracebacks occurred in supervisor and cleanup fault injection; expected by harness.
+- Suite emitted `INTEGRATED_ISOLATED_CRASH_SUITE=PASS`, `PRODUCTION_INTEGRATION_VERIFIED=NO`. These are isolated synthetic systemd/SQLite/grant scenarios, not proof production broker routes are fenced. Next: read-only audit of production execution and service startup paths, then opt-in staging wiring and tests; do not modify/restart production without explicit authorization.
