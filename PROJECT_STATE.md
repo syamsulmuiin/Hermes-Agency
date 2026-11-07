@@ -886,3 +886,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation to 8092869 and ran eleven unittest modules including fenced_unit_journal and all ten prior suites.
 - Result: 50 tests in 1.116s, OK, TEST_EXIT_CODE=0. All four new journal tests passed: prelaunch persistence, pending recovery after simulated crash-before-launch, failure remains pending, invalid unit denied.
 - Journal tests mock filesystem ownership verification and unit stop; no real broker SIGKILL, independent systemd recovery service, or transient unit was exercised. Production remains unchanged; recovery CLI integration, startup gate and crash safety remain pending.
+
+
+## Durable journal recovery CLI and startup gate integration (2026-11-07)
+- Commit b5ca1b8: opt-in recovery CLI --journal first checks journal exists, runs recover_owned_units (durable pending units), then systemd unit discovery/recovery; failures return nonzero and block subsequent startup in an installed ExecStartPre gate.
+- Commit d0fda7a: non-installed systemd lifecycle drop-in example supplies /var/lib/hermes-broker/fenced-owned.sqlite to ExecStartPre and ExecStopPost. Deployment requires matching broker journal_path, real interpreter/module paths, root ownership and single-entrypoint enforcement.
+- Commit db60c04: three mocked startup-gate tests added for journal-first, pending cleanup failure and missing journal. NOT YET RUN on VPS.
+- CRITICAL: CLI flag --broker-stopped is still only a caller assertion. No production service/drop-in installed; no real SIGKILL while transient unit running; startup and trusted lease-loss race not proven. Never claim crash-safe or run production noop until isolated real lifecycle acceptance and systemd lifetime coupling pass.
