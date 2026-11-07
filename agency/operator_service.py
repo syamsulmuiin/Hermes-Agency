@@ -77,6 +77,8 @@ def main(argv=None):
     parser.add_argument("--broker-key", required=True)
     parser.add_argument("--broker-socket", required=True)
     parser.add_argument("--worker-user", required=True)
+    parser.add_argument("--staging-admission-lock", default=None)
+    parser.add_argument("--staging-freeze-marker", default=None)
     args = parser.parse_args(argv)
     if os.geteuid() == 0:
         parser.error("The operator sidecar must run as the non-root trusted UID")
@@ -85,6 +87,14 @@ def main(argv=None):
              args.broker_socket)
     if any(not os.path.isabs(path) for path in paths):
         parser.error("All filesystem paths must be absolute")
+    if (args.staging_admission_lock is None) != (args.staging_freeze_marker is None):
+        raise PermissionError("Both staging admission paths required")
+    if args.staging_admission_lock is not None:
+        staging = "/run/hermes-staging/"
+        if (not args.operator_socket.startswith(staging)
+                or not args.staging_admission_lock.startswith(staging)
+                or not args.staging_freeze_marker.startswith(staging)):
+            raise PermissionError("Staging admission overrides require isolated staging paths")
     verify_private_state(args.state_dir, args.database, args.key_dir)
     verify_private_broker_group(args.broker_key, args.worker_user)
     secret = load_private_secret(args.secret_file)
@@ -97,6 +107,8 @@ def main(argv=None):
         lambda: _boundary_factory(args.database, secret),
         verifier, args.broker_key, args.broker_socket,
         lambda: stopping[0],
+        admission_lock=args.staging_admission_lock,
+        freeze_marker=args.staging_freeze_marker,
     )
     return 0
 
