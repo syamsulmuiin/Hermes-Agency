@@ -492,3 +492,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - The transient supervised systemd test now enables kernel/device/control-group/personality/SUID/realtime/syscall-architecture restrictions from the hardened production template. It deliberately uses `PrivateTmp=no`, `ProtectHome=no`, and temporary test-specific ReadWritePaths/WorkingDirectory, so this is **not** full production-unit equivalence.
 - Added `TrustedAgentExecution.execute_operator_approved_job` as an **in-process only** adapter requiring an already approved request, worker credential and lease; existing worker-facing stage protocol is unchanged. This is **not yet connected** to the running `hermes-agency.service` or to an external authenticated operator entrypoint; deployment and live E2E still pending.
 - No persistent broker installed, no live trusted service restarted, no worker permission expanded.
+
+## VPS verified runtime acceptance (2026-11-07)
+- VPS operator reported `Ran 196 tests ... OK (skipped=1)` and `RUNTIME_EXIT_CODE=0` for `deploy/test_supervised_integration.sh`.
+- Runtime output: `unused_signed_grant_prepared=PASS`, `unused_pre_rotation_grant_rejected=PASS`, `rejected_grant_no_execution=PASS`, two `supervised_trusted_adapter_to_systemd=PASS`, and `supervised_systemd=PASS worker_denied=PASS key_rotated_new_grants=PASS ledger=PASS`.
+- `hermes-agency.service` remained active. This validates the isolated hardened transient unit and key-rotation negative test, not full production unit equivalence or the live authenticated operator integration.
+- Next gate: inspect actual operator authentication/approval infrastructure and connect it to the running trusted process without worker-accessible broker issuance or production state changes until approved.
