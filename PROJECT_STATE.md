@@ -1147,3 +1147,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator reported at commit `d8dccd7`: `STATIC_EXIT=0`, `UNIT_EXIT=0` (1 skipped), `PRODUCTION_SERVICE_EXIT=0`, production service active.
 - This validation did not execute the new launcher with real trusted IPC/systemd or the example recovery service. No watchdog installation, SIGKILL test, concurrent launch/recovery test, or direct execution bypass closure has been demonstrated.
 - Next mandatory acceptance: staging-only fixture with real non-root peer and signed grant; independently supervised root stop/recovery, active unit SIGKILL injection, pending startup gate and recovery ordering; concurrency and bypass regression. Production remains unchanged.
+
+
+## Isolated acceptance runner and concurrency/bypass inventory (2026-11-07; pending VPS)
+- Added `agency/staging_acceptance_suite.py --execute` to run four existing real isolated systemd/IPC crash scenarios sequentially with mandatory PASS markers. Explicit output flags `NEW_LAUNCHER_REAL_END_TO_END_VERIFIED=NO`, `CONCURRENT_LAUNCH_RECOVERY_VERIFIED=NO`, `DIRECT_SYSTEMD_BYPASS_CLOSED=NO`, `PRODUCTION_INTEGRATION_VERIFIED=NO`. This is an isolated component acceptance aggregation, NOT a full new-launcher end-to-end acceptance test.
+- Added `tests/test_fenced_staging_concurrency.py` (threaded cooperative journal lock ordering) and `tests/test_fenced_direct_bypass_inventory.py` (read-only proof operator direct systemd execution still exists, nonroot denial). These new tests are NOT YET VALIDATED on VPS.
+- Critical remaining implementation: real launcher session using a fixture grant and trusted peer, independently supervised systemd recovery triggered by broker death, actual concurrent process launch/recovery and verified direct-bypass closure. Existing direct operator diagnostic behavior was deliberately not changed without a safe migration.
+- No production configuration, database, grants or service changed.
