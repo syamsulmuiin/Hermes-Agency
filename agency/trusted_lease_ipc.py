@@ -26,7 +26,9 @@ def _read_line(conn, *, allow_clean_eof=False):
         data.extend(chunk)
         if b"\n" in data:
             break
-    if not data and allow_clean_eof:\n        return None\n    if not data.endswith(b"\n") or data.count(b"\n") != 1 or len(data) > MAX_MESSAGE:
+    if not data and allow_clean_eof:
+        return None
+    if not data.endswith(b"\n") or data.count(b"\n") != 1 or len(data) > MAX_MESSAGE:
         raise PermissionError("Invalid lease IPC framing")
     return bytes(data[:-1])
 
@@ -58,16 +60,22 @@ def serve_fence_connection(conn, database, verification_key, *, root_uid=0, now=
         _send(conn, {"status": "locked", "grant_id": claims["id"]})
         # Do not expire a valid fence merely because the job exceeds 10s.
         conn.settimeout(None)
+        disconnected = False
         try:
-            finish = json.loads(_read_line(conn))
-            if finish != {"status": "done", "grant_id": claims["id"]}:
-                raise PermissionError("Invalid lease IPC completion")
+            raw = _read_line(conn, allow_clean_eof=True)
+            disconnected = raw is None
+            if disconnected and cleanup_before_release is None:
+                raise PermissionError("Broker disconnected without trusted cleanup")
+            if not disconnected:
+                finish = json.loads(raw)
+                if finish != {"status": "done", "grant_id": claims["id"]}:
+                    raise PermissionError("Invalid lease IPC completion")
         finally:
-            # Keep BEGIN IMMEDIATE held until the trusted-side job lifecycle
-            # has been stopped and verified, including unexpected broker EOF.
+            # Cleanup runs while BEGIN IMMEDIATE remains held, including EOF.
             if cleanup_before_release is not None:
                 cleanup_before_release(claims)
-    _send(conn, {"status": "released", "grant_id": claims["id"]})
+    if not disconnected:
+        _send(conn, {"status": "released", "grant_id": claims["id"]})
     return claims["id"]
 
 
