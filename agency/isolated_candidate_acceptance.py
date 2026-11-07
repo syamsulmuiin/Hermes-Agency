@@ -194,6 +194,26 @@ def run(*, deployed=None):
             if not until(lambda: os.path.exists(sock), 10):
                 raise AssertionError("Candidate socket not ready")
             print("CANDIDATE_SYSTEMD_SOCKET=PASS", flush=True)
+            if deployed is not None:
+                properties = ("NoNewPrivileges", "ProtectSystem", "ProtectHome",
+                              "PrivateTmp", "ReadWritePaths", "WorkingDirectory")
+                for name in (broker_unit, recovery_unit):
+                    values = {}
+                    for prop in properties:
+                        result = ctl("show", name, "--property=" + prop, "--value")
+                        if result.returncode:
+                            raise AssertionError("Cannot inspect effective systemd " + prop)
+                        values[prop] = result.stdout.decode("utf-8", "replace").strip()
+                    if (values["NoNewPrivileges"] != "yes"
+                            or values["ProtectSystem"] != "strict"
+                            or values["ProtectHome"] != "yes"
+                            or values["PrivateTmp"] != "yes"
+                            or values["WorkingDirectory"] != repo
+                            or base not in values["ReadWritePaths"]):
+                        raise AssertionError("Effective staging sandbox mismatch: " + name
+                                             + " " + repr(values))
+                print("CANDIDATE_EFFECTIVE_SYSTEMD_SANDBOX=PASS", flush=True)
+
             # SO_PEERCRED requires the dedicated nonroot UID. Fork and drop
             # privileges in a child; never weaken candidate peer checking.
             def request(grant):
@@ -293,6 +313,12 @@ def run(*, deployed=None):
                     os.waitpid(pid, os.WNOHANG)
                 except ChildProcessError:
                     pass
+    # Disposable-unit rollback: no candidate unit files remain installed.
+    if any(os.path.lexists(path) for path in (bp, rp)):
+        raise AssertionError("Disposable staging units not removed")
+    if ctl("is-enabled", broker_unit).stdout.strip() == b"enabled":
+        raise AssertionError("Disposable broker unexpectedly enabled")
+    print("CANDIDATE_DISPOSABLE_ROLLBACK=PASS", flush=True)
     for name in ("hermes-agency.service", "hermes-signed-broker.service"):
         if ctl("is-active", name).stdout.strip() != b"active":
             raise AssertionError("Production service not active: " + name)
