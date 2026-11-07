@@ -1472,3 +1472,6 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator ran `agency.fenced_final_manifest_audit`, exit 2: broker pinned path, recovery pinned path, and trusted SQLite WAL/lease writable path failed. Both production services active.
 - Candidate-only manifests updated in GitHub commits `c10a4db` and `b87d438`: WorkingDirectory pinned to `/opt/hermes-fenced-377abe8b948b`; broker sandbox `ReadWritePaths` now includes `/var/lib/hermes-agency`. No active unit installed/restarted or production resource mutated. Re-run static audit and systemd-analyze verify on VPS.
 - Static PASS will not prove effective trusted UID writes, production approved-job routing or real operator approval E2E. Cutover remains NO-GO.
+
+## VPS corrected candidate manifest verified (2026-11-07)
+- Operator pulled `4d8390c`: `FENCED_MANIFEST_STATIC_GATE=PASS`, `MANIFEST_AUDIT_EXIT_CODE=0`, `systemd-analyze verify` exit 0; both live services active. Effective runtime sandbox and real operator-authenticated approval-to-fenced-broker E2E remain untested. Production cutover NOT executed and NO-GO.
