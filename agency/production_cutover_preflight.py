@@ -9,7 +9,7 @@ import pathlib
 import subprocess
 import sys
 
-EXPECTED_PIN = "912dce6aef6b"
+EXPECTED_PIN = "21c9cad92cd5"
 SERVICES = ("hermes-agency.service", "hermes-signed-broker.service",
             "hermes-operator-sidecar.service")
 
