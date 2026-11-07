@@ -932,3 +932,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Three-track real lifecycle acceptance requested (2026-11-07)
 - Real systemd gate: commit 2c4a746 adds opt-in agency/real_systemd_startup_gate_test.py. Creates only a randomly named test unit in /run/systemd/system, verifies failing ExecStartPre blocks ExecStart marker and succeeding ExecStartPre permits it, then removes test unit. NOT RUN on VPS. This test uses systemctl daemon-reload and does not exercise the actual durable journal recovery CLI.
 - Real trusted lease IPC end-to-end and automatic recovery on SIGKILL remain NOT IMPLEMENTED/NOT VERIFIED. Existing socketpair EOF acceptance is not a substitute. Do not claim the three-track acceptance is complete. Production service unchanged.
+
+
+## Real ExecStartPre VPS test partial failure (2026-11-07)
+- Operator ran `python3 -m agency.real_systemd_startup_gate_test --execute` after pulling 936848a.
+- Output: `real_execstartpre_failure_blocks_execstart=PASS`, then `RuntimeError: Gate success failed to start test service`; `STARTUP_GATE_EXIT_CODE=1`. Thus startup denial verified, subsequent allow/start NOT verified.
+- Commit f581113 adds diagnostic stderr and `systemctl status --no-pager --full` for the failing test unit; does not relax gate or change production. Needs VPS rerun with diagnostic output. Trusted IPC and automatic recovery still pending.
