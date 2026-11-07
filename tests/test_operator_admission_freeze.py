@@ -2,6 +2,7 @@
 
 This marker is not an exclusive cutover lock; tests cover only rejection.
 """
+import contextlib
 import unittest
 from unittest.mock import patch
 
@@ -19,7 +20,7 @@ class OperatorFreezeTests(unittest.TestCase):
         request = {"action": "approve_and_execute", "approval_id": "a",
                    "operator_secret_hex": "00" * 32, "task_id": "t",
                    "job": "j", "worker_credential": "c", "lease_token": "l"}
-        with patch("agency.operator_control.os.path.lexists", return_value=True):
+        with patch("agency.operator_control.operator_admission_lease", return_value=contextlib.nullcontext()), patch("agency.operator_control.os.path.lexists", return_value=True):
             with self.assertRaisesRegex(PermissionError, "frozen"):
                 dispatch_operator(Boundary(), request, ("operator", b"s", b"v"),
                                   "/unused/key", "/unused/socket")
