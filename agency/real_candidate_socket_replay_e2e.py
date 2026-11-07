@@ -4,13 +4,11 @@ Uses actual candidate entrypoint and trusted-UID client with private /run fixtur
 No production units, socket, journal, keys or databases are accessed.
 """
 import argparse
-import hashlib
 import hmac
 import json
 import os
 import pwd
 import secrets
-import signal
 import socket
 import sqlite3
 import subprocess
@@ -60,8 +58,10 @@ def run():
         raise PermissionError("Dedicated non-root identity required")
     if not os.path.isdir(BASE):
         os.mkdir(BASE, 0o700)
-    if os.stat(BASE).st_uid != 0 or os.stat(BASE).st_mode & 0o022:
-        raise PermissionError("Unsafe isolated staging base")
+    base_info = os.stat(BASE)
+    if (base_info.st_uid != 0 or base_info.st_mode & 0o022
+            or not base_info.st_mode & 0o001):
+        raise PermissionError("Staging base must be root-owned, non-writable and traversable by trusted UID")
     folder = BASE + "/socket-e2e-" + secrets.token_hex(8)
     os.mkdir(folder, 0o710)
     os.chown(folder, 0, identity.pw_gid)
