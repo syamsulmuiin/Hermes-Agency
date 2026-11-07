@@ -77,9 +77,17 @@ def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--broker-stopped", action="store_true", required=True)
+    parser.add_argument("--journal")
     args = parser.parse_args(argv)
+    if args.journal is not None:
+        from .fenced_unit_journal import recover_owned_units
+        if not os.path.isfile(args.journal):
+            raise PermissionError("Durable ownership journal missing")
+        owned = recover_owned_units(args.journal)
+    else:
+        owned = ()
     recovered = recover_fenced_units(broker_stopped=args.broker_stopped)
-    print("fenced_unit_recovery_verified=" + str(len(recovered)), flush=True)
+    print("fenced_unit_recovery_verified=" + str(len(set(owned) | set(recovered))), flush=True)
     return 0
 
 
