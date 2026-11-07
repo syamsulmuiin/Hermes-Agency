@@ -59,7 +59,7 @@ def gate_denied(path):
     return False
 
 
-def run():
+def run(*, deployed=None):
     if os.geteuid() or not os.path.isdir("/run/systemd/system"):
         raise PermissionError("Root and systemd required")
     identity = pwd.getpwnam("nobody")
@@ -71,6 +71,18 @@ def run():
         raise PermissionError("Unsafe fixture base")
     os.chmod(base, 0o711)
     repo = os.path.dirname(os.path.dirname(__file__))
+    sandbox = ''
+    if deployed is not None:
+        import re
+        from pathlib import Path
+        repo = str(Path(deployed).resolve(strict=True))
+        if not re.fullmatch(r'/opt/hermes-fenced-[0-9a-f]{12}', repo):
+            raise PermissionError('Pinned /opt candidate deployment required')
+        if not Path(repo, 'agency/fenced_broker_candidate.py').is_file():
+            raise PermissionError('Candidate module missing')
+        sandbox = ('NoNewPrivileges=yes\\nProtectSystem=strict\\n'
+                   'ReadWritePaths=/run/hermes-staging\\n'
+                   'ProtectHome=yes\\nPrivateTmp=yes\\n')
     python = os.path.realpath(sys.executable)
     token = secrets.token_hex(8)
     broker_unit = "hermes-isolated-candidate-" + token + ".service"
@@ -133,7 +145,7 @@ def run():
             for path, body in (
                 (rp, "[Unit]\nDescription=Isolated candidate recovery\n"
                      "[Service]\nType=oneshot\nUser=root\n"
-                     "WorkingDirectory=" + repo + "\nExecStart=" + recovery_command + "\n"),
+                     "WorkingDirectory=" + repo + "\n" + sandbox + "ExecStart=" + recovery_command + "\n"),
                 (bp, "[Unit]\nDescription=Isolated persistent fenced candidate\n"
                      "After=" + recovery_unit + "\nRequires=" + recovery_unit
                      + "\nOnFailure=" + recovery_unit
@@ -259,10 +271,11 @@ def run():
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--deployed", default=None, help="Pinned /opt candidate enables real sandbox directives")
     args = parser.parse_args(argv)
     if not args.execute:
         parser.error("Explicit --execute required")
-    run()
+    run(deployed=args.deployed)
 
 
 if __name__ == "__main__":
