@@ -611,3 +611,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Broker static hardening audit: `production_unit_static_hardening=PASS`, `BROKER_AUDIT_EXIT_CODE=0`.
 - `systemd-tmpfiles --cat-config deploy/hermes-optional-runtime.tmpfiles.example` displayed global tmpfiles configuration (output truncated at lines 1–32), not conclusive evidence of Hermes-specific entries. `TMPFILES_READ_EXIT_CODE` and final production service status were not visible in the provided output; **do not infer their values**.
 - Next: validate the exact two Hermes tmpfiles entries without running `--create` or `--remove`, confirm exit code and service state. No production activation or provisioning authorized.
+
+
+## Hermes tmpfiles static validation complete (2026-11-07)
+- VPS operator ran exact read-only parser comparison for `deploy/hermes-optional-runtime.tmpfiles.example`: `HERMES_TMPFILES_STATIC_CHECK=PASS`, `TMPFILES_CHECK_EXIT_CODE=0`.
+- Existing `hermes-agency.service` was `active` after the check. Prior broker/sidecar `systemd-analyze verify` and broker static hardening audit were PASS; minimal production-based staging imports 14/14 PASS; isolated hardened runtime acceptance previously PASS.
+- **Deployment preparation static gates completed**, but optional units/tmpfiles not installed, secrets/verifier/ledger not provisioned, live production path permissions and service activation not validated. Explicit authorization and controlled backup/rollback required before production modification.
