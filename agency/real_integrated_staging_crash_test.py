@@ -108,7 +108,7 @@ def exercise():
             "task": "integrated-crash", "worker": "staging-worker",
             "lease_generation": 1, "job": "noop",
             "params_hash": fingerprint({"job": "noop"}),
-            "iat": now, "exp": now + 120,
+            "iat": now, "exp": now + 60,
         }
         grant = {"claims": claims, "signature": hmac.new(
             key, _canonical(claims), hashlib.sha256).hexdigest()}
