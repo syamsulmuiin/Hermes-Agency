@@ -4,6 +4,8 @@ Run ONLY as root on a disposable acceptance environment. Does not modify
 the live Hermes trusted service or install a persistent broker.
 """
 import json
+import hashlib
+import hmac
 import os
 import pwd
 import socket
@@ -141,8 +143,16 @@ def run_acceptance(trusted_user="hermes-trusted", worker_user="hermes-worker"):
         envelope = json.loads(Path(envelope_path).read_text())
         negative_attempt(envelope, "replay")
         expired = json.loads(json.dumps(envelope))
-        expired["claims"]["exp"] = expired["claims"]["iat"] - 1
-        negative_attempt(expired, "tampered expiry")
+        expired["claims"]["exp"] = expired["claims"]["iat"] + 1
+        with open(key_path, "rb") as handle:
+            key = handle.read()
+        raw = json.dumps(expired["claims"], sort_keys=True,
+                         separators=(",", ":"), allow_nan=False).encode()
+        expired["signature"] = hmac.new(key, raw, hashlib.sha256).hexdigest()
+        delay = expired["claims"]["exp"] - time.time() + 0.2
+        if delay > 0:
+            time.sleep(delay)
+        negative_attempt(expired, "expired signed grant")
         with sqlite3.connect(ledger_path) as db:
             count = db.execute("SELECT COUNT(*) FROM signed_grant_consumptions").fetchone()[0]
         if count != 1:
