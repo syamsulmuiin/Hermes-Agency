@@ -773,3 +773,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator fast-forwarded VPS checkout ac97436 -> 18ffa31 and ran unittest modules test_trusted_lease_ipc, test_trusted_lease_fence, test_trusted_broker_socket, test_broker_grants.
 - Result: Ran 21 tests in 0.676s, OK, TEST_EXIT_CODE=0, no skips; 3 new IPC tests, 5 fencing, 6 broker socket, 7 broker grants passed.
 - This validates isolated callback lock lifetime and disconnect cleanup only. IPC remains unconnected to broker service, replay ledger, and real systemd execution; no production acceptance.
+
+
+## IPC long-job timeout fix (2026-11-07)
+- Commit 6b65237 changes experimental trusted_lease_ipc handshake timeout to no socket timeout once the lease is locked, preventing an arbitrary 10-second timeout from releasing the fence while an allowed job is still running.
+- Not yet regression-tested on VPS; no production deployment or restart. This does not solve broker/sidecar crash safety, root broker ledger integration, or actual systemd noop acceptance. In particular, a crash after job start may release trusted lock while the systemd job continues; do not deploy before a bounded job-lifetime supervisor and fail-closed crash tests.
