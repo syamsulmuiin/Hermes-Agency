@@ -658,3 +658,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - User installed `/etc/tmpfiles.d/hermes-optional-runtime.conf` from the repository template and ran `systemd-tmpfiles --create`.
 - Verified `/run/hermes-broker` `0710 root:hermes-trusted`, `/run/hermes-operator` `0700 hermes-trusted:hermes-trusted`, optional broker and operator services inactive, main `hermes-agency.service` active; output `TMPFILES_DEPLOYMENT=PASS`.
 - Next: install and statically verify optional systemd unit files without starting or enabling them, then validate staged activation and negative access tests.
+
+
+## Production optional systemd units installed, inactive (2026-11-07)
+- User installed broker and operator unit templates unchanged to `/etc/systemd/system/hermes-signed-broker.service` and `/etc/systemd/system/hermes-operator-sidecar.service`; `cmp` and `systemd-analyze verify` succeeded, followed by `systemctl daemon-reload`.
+- Both optional units verified `disabled` and `inactive`; main `hermes-agency.service` active; `SYSTEMD_UNIT_INSTALLATION=PASS`.
+- Next: start broker only under explicit controlled test, verify root process and socket permissions and absence of startup errors, then operator sidecar and negative-access tests. Do not enable at boot until full production acceptance.
