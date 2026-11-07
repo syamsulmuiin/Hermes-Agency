@@ -2,14 +2,11 @@
 
 Called only by the isolated candidate harness. Never uses production paths.
 """
-import hashlib
 import json
 import os
 import pwd
 import secrets
 import signal
-import socket
-import stat
 import time
 
 from .isolated_operator_ipc import request_operator
@@ -52,6 +49,11 @@ def _trusted_fixture(db, identity, operator_secret, credential_secret, job):
             os.setgroups([])
             os.setgid(identity.pw_gid)
             os.setuid(identity.pw_uid)
+            os.umask(0o077)
+            os.chmod(db, 0o600)
+            for suffix in ("-wal", "-shm", "-journal"):
+                if os.path.isfile(db + suffix):
+                    os.chmod(db + suffix, 0o600)
             result = _fixture(db, identity, operator_secret, credential_secret, job)
             os.write(write_fd, json.dumps(result).encode())
             os._exit(0)
@@ -98,23 +100,52 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo)
             "--secret-file", secret_path, "--operator-socket", operator_socket,
             "--operator-verifier", verifier_path, "--broker-key", broker_key,
             "--broker-socket", broker_socket, "--worker-user", worker.pw_name]
+    # Existing broker fixture may have created SQLite with process umask 022.
+    # Normalize only disposable trusted files, using their owning UID.
+    def prepare_private_database():
+        child = os.fork()
+        if child == 0:
+            try:
+                os.setgroups([])
+                os.setgid(identity.pw_gid)
+                os.setuid(identity.pw_uid)
+                os.chmod(db, 0o600)
+                for suffix in ("-wal", "-shm", "-journal"):
+                    if os.path.isfile(db + suffix):
+                        os.chmod(db + suffix, 0o600)
+                os._exit(0)
+            except BaseException:
+                os._exit(1)
+        _, status = os.waitpid(child, 0)
+        if os.waitstatus_to_exitcode(status):
+            raise AssertionError("Cannot secure isolated trusted database")
+
+    prepare_private_database()
+    error_read, error_write = os.pipe()
     pid = os.fork()
     if pid == 0:
+        os.close(error_read)
         try:
             os.setgroups([])
             os.setgid(identity.pw_gid)
             os.setuid(identity.pw_uid)
             os.chdir(repo)
+            os.umask(0o077)
             sidecar_main(args)
-        except BaseException:
-            pass
+        except BaseException as exc:
+            # Never log secrets, paths, or raw exception arguments.
+            os.write(error_write, type(exc).__name__.encode("ascii", "replace")[:100])
         os._exit(1)
+    os.close(error_write)
+    child_reaped = False
     try:
         deadline = time.monotonic() + 12
         while not os.path.exists(operator_socket) and time.monotonic() < deadline:
-            ended, _ = os.waitpid(pid, os.WNOHANG)
+            ended, status = os.waitpid(pid, os.WNOHANG)
             if ended:
-                raise AssertionError("Isolated sidecar exited before socket ready")
+                child_reaped = True
+                detail = os.read(error_read, 100).decode("ascii", "replace")
+                raise AssertionError("Isolated sidecar exited before socket ready: " + (detail or "unknown"))
             time.sleep(.05)
         if not os.path.exists(operator_socket):
             raise AssertionError("Isolated sidecar socket timeout")
@@ -131,15 +162,29 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo)
             raise AssertionError("Operator replay accepted")
         print("SIDECAR_OPERATOR_REPLAY_DENIED=PASS", flush=True)
     finally:
-        os.kill(pid, signal.SIGTERM)
-        deadline = time.monotonic() + 5
-        while time.monotonic() < deadline:
-            ended, _ = os.waitpid(pid, os.WNOHANG)
-            if ended:
-                break
-            time.sleep(.05)
-        else:
-            os.kill(pid, signal.SIGKILL)
-            os.waitpid(pid, 0)
+        if not child_reaped:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                try:
+                    ended, _ = os.waitpid(pid, os.WNOHANG)
+                except ChildProcessError:
+                    break
+                if ended:
+                    break
+                time.sleep(.05)
+            else:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                try:
+                    os.waitpid(pid, 0)
+                except ChildProcessError:
+                    pass
+        os.close(error_read)
         if os.path.lexists(operator_socket):
             raise AssertionError("Sidecar did not clean up operator socket")
