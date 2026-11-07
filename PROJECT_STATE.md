@@ -904,3 +904,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Isolated SIGKILL exercise prepared (2026-11-07)
 - Commit 7306bb9: agency/isolated_fenced_crash_test.py runs a separate broker-like process, durably registers a test-only unit, SIGKILLs the process, verifies startup is denied while journal pending, then uses a FAKE in-memory systemd backend to simulate independent cleanup and verify startup is allowed only after journal marked verified.
 - This test is not yet executed on VPS. It does NOT create or stop a real transient systemd unit, exercise a live trusted lease IPC disconnect, or prove automatic systemd startup ordering. Production untouched. Real systemd and fence-loss acceptance remain blockers.
+
+
+## Isolated SIGKILL harness verified on VPS (2026-11-07)
+- Operator pulled development/foundation to 6df586a and ran `python3 -m agency.isolated_fenced_crash_test`.
+- Output: `isolated_sigkill_recovery=True`, `CRASH_TEST_EXIT_CODE=0`.
+- This proves test-child SIGKILL plus persistent pending journal and simulated startup denial/recovery with a FAKE systemd backend. It does NOT prove real systemd transient-unit termination, actual systemd startup ordering, or live trusted lease disconnect safety. No production services changed.
