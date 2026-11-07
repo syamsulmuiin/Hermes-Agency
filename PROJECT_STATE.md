@@ -910,3 +910,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation to 6df586a and ran `python3 -m agency.isolated_fenced_crash_test`.
 - Output: `isolated_sigkill_recovery=True`, `CRASH_TEST_EXIT_CODE=0`.
 - This proves test-child SIGKILL plus persistent pending journal and simulated startup denial/recovery with a FAKE systemd backend. It does NOT prove real systemd transient-unit termination, actual systemd startup ordering, or live trusted lease disconnect safety. No production services changed.
+
+
+## Real systemd acceptance harness prepared, NOT EXECUTED (2026-11-07)
+- Commit 8e3d0bf: agency/real_systemd_crash_acceptance.py opt-in --execute harness. Creates random test-only hermes-fenced transient units executing /usr/bin/sleep 45 with RuntimeMaxSec=60, temporary root-owned journal under /run, SIGKILLs separate broker test process, verifies unit survives, injects cleanup failure preserving pending, then calls real stop_and_verify_unit via recover_owned_units. Separate socketpair EOF check stops/verifies a second test unit. Finally attempts cleanup.
+- CAUTION: This is real systemd execution and must be approved/run on a disposable or maintenance test VPS, not blindly on production. It does not install or modify hermes-agency.service or broker production; systemd transient units are real and temporary.
+- NOT PROVEN: actual systemd ExecStartPre startup gate ordering (failure injection is application-level), actual trusted lease IPC or SQLite fence loss, independent recovery unit automatic activation after broker crash, race-free lifetime coupling. Do not claim any of these pass. User must share test output before recording results.
