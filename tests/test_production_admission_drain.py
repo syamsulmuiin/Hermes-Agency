@@ -8,6 +8,7 @@ from agency.operator_control import operator_admission_lease
 from agency import production_admission_drain as drain
 
 
+@unittest.skipUnless(os.geteuid() == 0, "Root-owned lock fixture required")
 class AdmissionDrainTests(unittest.TestCase):
     def test_replaced_inode_denied(self):
         with tempfile.TemporaryDirectory() as directory:
