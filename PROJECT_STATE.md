@@ -1475,3 +1475,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 
 ## VPS corrected candidate manifest verified (2026-11-07)
 - Operator pulled `4d8390c`: `FENCED_MANIFEST_STATIC_GATE=PASS`, `MANIFEST_AUDIT_EXIT_CODE=0`, `systemd-analyze verify` exit 0; both live services active. Effective runtime sandbox and real operator-authenticated approval-to-fenced-broker E2E remain untested. Production cutover NOT executed and NO-GO.
+
+## Authenticated operator-to-grant regression checkpoint (2026-11-07)
+- Commit `4929a580` adds `tests/test_operator_grant_integration.py`, exercising real scrypt operator authentication, a persisted SQLite approval decision, real trusted grant reservation/signing, signature verification, and replay denial. Negative tests cover denied approval, wrong worker/lease, invalid job and missing approval.
+- The broker signing key read and socket submission are mocked in these unit tests. They do NOT demonstrate a real broker socket, cross-UID key access, effective systemd sandbox, live lease check at the broker, or production operator ingress.
+- GitHub commit completed; latest CI and VPS results are PENDING. No production unit or production data was changed.
+- Next: validate these regression tests on VPS, implement an isolated real-approval broker acceptance using staging identities/resources, then test effective systemd permissions and recovery ordering. Cutover remains NO-GO until verified and explicitly authorized.
