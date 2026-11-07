@@ -69,7 +69,15 @@ def cutover(adapter):
                 adapter.quarantine()
                 raise CutoverError("Cutover failed; rollback unverified; durable quarantine required") from rollback_error
             raise CutoverError("Cutover failed; verified rollback restored legacy route") from primary
-        adapter.unfreeze()
+        try:
+            adapter.unfreeze()
+        except Exception as unfreeze_error:
+            # A failed release after a successful handover is not success.
+            # Never return PASS or assume admission has safely reopened.
+            adapter.quarantine()
+            raise CutoverError(
+                "Cutover handover completed but admission unfreeze failed; "
+                "durable quarantine required") from unfreeze_error
         steps.append("unfrozen")
     return CutoverResult("PASS", tuple(steps))
 
