@@ -4,7 +4,6 @@ No live systemd adapter is exposed until production attestation is complete.
 The deterministic state machine can be acceptance-tested with an isolated
 adapter; failure triggers rollback while the admission drain remains held.
 """
-import contextlib
 from dataclasses import dataclass
 
 
@@ -56,7 +55,7 @@ def cutover(adapter):
             steps.append("replay_denied")
             adapter.health()
             steps.append("healthy")
-        except BaseException as primary:
+        except Exception as primary:
             try:
                 # Even a partially completed step may have side effects.
                 adapter.rollback()
@@ -64,9 +63,11 @@ def cutover(adapter):
                 adapter.health()
                 steps.append("rollback_healthy")
                 adapter.unfreeze()
-            except BaseException as rollback_error:
-                # Do not unfreeze: ambiguous state must remain quarantined.
-                raise CutoverError("Cutover failed; rollback unverified; admission must remain frozen") from rollback_error
+            except Exception as rollback_error:
+                # A durable independent freeze gate is mandatory for any
+                # real adapter: releasing a process lock alone is not safe.
+                adapter.quarantine()
+                raise CutoverError("Cutover failed; rollback unverified; durable quarantine required") from rollback_error
             raise CutoverError("Cutover failed; verified rollback restored legacy route") from primary
         adapter.unfreeze()
         steps.append("unfrozen")
