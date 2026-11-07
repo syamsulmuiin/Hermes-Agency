@@ -584,3 +584,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Existing production `hermes-agency.service` remained `active`.
 - Scope: imports from the **development checkout**, not from an isolated staging tree or installed production. No claim of full production compatibility or final deployment readiness.
 - Next: test an explicit minimal runtime manifest in a disposable staging tree based on the installed production package, including import checks, relevant tests and no production changes; then review final unit files and provisioning/rollback before requesting activation approval.
+
+
+## Minimal production-based staging import test prepared (2026-11-07)
+- VPS AST output identified relative imports for the broker/operator runtime; no parser errors despite duplicated terminal echo. Existing baseline has 27 matching Python files, one differing and 22 missing.
+- Added `deploy/test_runtime_staging_imports.sh`: creates throwaway `/tmp` package, copies only top-level `.py` source files from installed production (no keys/DB), overlays 11 explicitly listed runtime/operator files from development including `trusted_execution.py`, and uses isolated Python (`-I`) to assert 14 critical modules import **from staging only**. Cleans up temporary package on exit. Does not change production.
+- **Test has not been run on VPS yet.** Next: run `bash -n deploy/test_runtime_staging_imports.sh` and `bash deploy/test_runtime_staging_imports.sh`, then report exit code and main service status. An import PASS is not a production execution or final sandbox acceptance.
