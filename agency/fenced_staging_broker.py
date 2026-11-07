@@ -27,7 +27,7 @@ def unit_for_grant(grant_id):
 
 
 def staging_broker_job(conn, grant, verification_key, journal, *,
-                       runner=run_fenced_systemd_unit):
+                       runner=run_fenced_systemd_unit, ledger=None):
     """Serialize admission, durable registration, execution and verification.
 
     This function requires a separately provisioned trusted IPC peer and
@@ -42,17 +42,29 @@ def staging_broker_job(conn, grant, verification_key, journal, *,
     unit = unit_for_grant(claims["id"])
 
     def launch():
+        if ledger is not None:
+            from .fenced_grant_ledger import consume_fenced_grant
+            consume_fenced_grant(ledger, grant, verification_key)
         def execute(job):
             if job != claims["job"]:
                 raise PermissionError("Grant job mismatch")
             return supervised_fenced_unit(
                 job, claims["id"], conn, runner)
-        result = broker_fenced_job(conn, grant, execute)
+        try:
+            result = broker_fenced_job(conn, grant, execute)
+        except BaseException:
+            if ledger is not None:
+                from .fenced_grant_ledger import finish_fenced_grant
+                finish_fenced_grant(ledger, claims["id"], verified=False)
+            raise
         # Still under staging launch lock. Do not mark verified until the
         # trusted peer has acknowledged release after stop verification.
         recovered = recover_owned_units(journal, stop_unit=stop_and_verify_unit)
         if recovered != (unit,):
             raise PermissionError("Unexpected journal recovery set")
+        if ledger is not None:
+            from .fenced_grant_ledger import finish_fenced_grant
+            finish_fenced_grant(ledger, claims["id"], verified=True)
         return result
 
     return staging_launch(journal, unit, launch)
