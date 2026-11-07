@@ -1203,3 +1203,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS at `ce3b330`: `STATIC_EXIT=0`, `UNIT_EXIT=1` (279 tests, 2 StopIteration errors, 1 skipped), `LAUNCHER_EXIT=125` (not executed), `PRODUCTION_SERVICE_EXIT=0` (active).
 - Two legacy tests in `tests/test_fenced_systemd_supervisor.py` assumed systemctl stop precedes status. New collected-unit-safe supervisor queries status first, so finite mock side effects were exhausted.
 - Patch `b8dad6c` updates the legacy mocks to match pre-stop verification and preserve rejection tests. NOT YET VPS-VALIDATED. No production changes; real launcher and independent SIGKILL recovery remain unverified.
+
+## Verified real staging launcher normal path (2026-11-07)
+- VPS at `9f5b95f`: `STATIC_EXIT=0`, `UNIT_EXIT=0` (279 tests, 1 skipped), `LAUNCHER_EXIT=0`, `PRODUCTION_SERVICE_EXIT=0` (`active`).
+- Real staging launcher emitted PASS for signed grant/nonroot trusted peer, stop-before-release, and startup gate after recovery. This validates normal staging end-to-end only.
+- Remaining acceptance: real new-launcher broker SIGKILL while its systemd unit is active, independently systemd-triggered journal recovery, startup denial while pending, concurrent launch/recovery race, and direct unfenced systemd bypass closure. Existing `real_supervisor_failure_test.py` uses a separate simulated supervisor, not the new staging launcher; do not conflate its evidence.
+- No production service changes or main-branch merge authorized.
