@@ -53,7 +53,7 @@ def provision_broker_key(path, trusted_gid):
 
 
 def serve_signed_once(socket_path, trusted_uid, trusted_gid, ledger_path,
-                      trusted_db_path, key_path, executor=None):
+                      trusted_db_path, key_path, executor=None, on_ready=None):
     """Root-only one-shot broker, socket 0660 root:trusted-primary-GID.
 
     The parent directory MUST be root-owned and traversable by trusted UID,
@@ -81,6 +81,8 @@ def serve_signed_once(socket_path, trusted_uid, trusted_gid, ledger_path,
         os.chmod(socket_path, 0o660)
         listener.listen(1)
         listener.settimeout(15)
+        if on_ready is not None:
+            on_ready()
         conn, _ = listener.accept()
         with conn:
             if executor is None:
