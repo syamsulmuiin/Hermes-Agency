@@ -31,6 +31,11 @@ class OperatorControlTests(unittest.TestCase):
                                 return_value=contextlib.nullcontext())
         self._admission.start()
         self.addCleanup(self._admission.stop)
+        # Unit tests must not depend on the live production freeze marker.
+        self._freeze = patch("agency.operator_control.os.path.lexists",
+                             return_value=False)
+        self._freeze.start()
+        self.addCleanup(self._freeze.stop)
 
     def test_strict_approve_request(self):
         self.assertEqual(
