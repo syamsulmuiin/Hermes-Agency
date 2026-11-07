@@ -893,3 +893,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Commit d0fda7a: non-installed systemd lifecycle drop-in example supplies /var/lib/hermes-broker/fenced-owned.sqlite to ExecStartPre and ExecStopPost. Deployment requires matching broker journal_path, real interpreter/module paths, root ownership and single-entrypoint enforcement.
 - Commit db60c04: three mocked startup-gate tests added for journal-first, pending cleanup failure and missing journal. NOT YET RUN on VPS.
 - CRITICAL: CLI flag --broker-stopped is still only a caller assertion. No production service/drop-in installed; no real SIGKILL while transient unit running; startup and trusted lease-loss race not proven. Never claim crash-safe or run production noop until isolated real lifecycle acceptance and systemd lifetime coupling pass.
+
+
+## Durable recovery startup-gate regression verified on VPS (2026-11-07)
+- Operator pulled development/foundation to 9deb8b8 and ran twelve unittest modules including durable_recovery_gate and all prior suites.
+- Result: 53 tests in 1.142s, OK, TEST_EXIT_CODE=0. All three new mocked startup-gate tests passed. Expected argparse error output is from the missing --broker-stopped negative test.
+- No systemd drop-in installed, no real transient unit or forced broker crash, and no proven race-free startup gate. Production unchanged. Next: isolated crash-injection harness and durable ownership/service lifetime coordination before any production acceptance.
