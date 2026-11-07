@@ -1,0 +1,20 @@
+# Candidate only. Do not enable or deploy over the active signed broker.
+# A failure recovery unit is independently managed by PID 1, not the broker.
+[Unit]
+Description=Hermes fenced broker independent crash recovery (candidate)
+RequiresMountsFor=/var/lib/hermes-broker
+After=local-fs.target
+Before=hermes-fenced-broker-candidate.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/hermes-agency
+ExecStart=/usr/bin/python3 -m agency.fenced_staging_recovery --journal /var/lib/hermes-broker/owned-units.sqlite --execute
+TimeoutStartSec=90
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/hermes-broker
+ProtectHome=yes
+PrivateTmp=yes
