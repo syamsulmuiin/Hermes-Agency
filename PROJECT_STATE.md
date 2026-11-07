@@ -1436,3 +1436,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## VPS real systemd resource metadata audit PASS (2026-11-07)
 - Operator ran `agency.fenced_resource_audit --deployed /opt/hermes-fenced-377abe8b948b --execute` from checkout `68f89a5`. All three production file metadata checks (trusted DB, broker ledger, signing key) and both directory metadata checks (/run/hermes-broker, /var/lib/hermes-broker) passed under sandbox, exit 0. Both production services active, cutover NO.
 - Output explicitly `RESOURCE_CONTENT_OR_WRITE_TESTED=NO`: not evidence of signing-key read, SQLite write/WAL, socket binding, trusted UID access or PID1 recovery unit ordering. Next gate must use isolated writable staging resources and actual systemd recovery ordering.
+
+## Isolated candidate sandbox + real PID1 integration test prepared (2026-11-07)
+- VPS resource metadata sandbox audit PASS (exit 0), production services active; not a write test.
+- GitHub `62cde1b` / `445361c`: extended existing `agency.isolated_candidate_acceptance` with optional `--deployed /opt/hermes-fenced-<revision>`; dynamically installed disposable broker/recovery units now use the pinned working directory and actual candidate sandbox directives (`NoNewPrivileges`, `ProtectSystem=strict`, staging-only `ReadWritePaths`, `ProtectHome`, `PrivateTmp`). Existing signed-grant, replay, trusted lease, SIGKILL, PID1 recovery, restart checks run with writable staging-only SQLite/key/socket; no production resource writes. Operator VPS result pending. No assertion of PASS until output.
+- Production caller routing remains untested/unmodified; cannot safely exercise live signed-grant path without an approved routing change. Cutover remains NO-GO.
