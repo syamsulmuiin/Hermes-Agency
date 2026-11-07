@@ -1222,3 +1222,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - An independently managed temporary systemd watcher detects the broker's death and triggers OnFailure staging recovery. A test-controlled release marker permits deterministic assertion of pending startup denial before recovery, followed by verified unit stop, journal verification and startup gate reopening.
 - Test writes only isolated staging fixtures and temporary `hermes-integrated-*` systemd units; systemd daemon-reload is required for temporary units, but no production unit files, service controls, or production journal are touched. Failures remain unverified until VPS execution and diagnostics.
 - Still outstanding: launch/recovery concurrency acceptance and closing direct unfenced systemd bypass. No merge to main.
+
+## Integrated staging crash first VPS run (2026-11-07)
+- At `657ce4e`: static PASS, unit tests PASS (279, 1 skipped), integrated test FAIL before unit launch with `PermissionError: Expired or future grant`, production service active.
+- Root cause: synthetic fixture grant `exp=iat+120`, exceeding immutable broker verifier maximum of 60 seconds. Corrected fixture to `exp=iat+60` in `1cbf838`; verifier and production unchanged. Awaiting VPS retest; integrated SIGKILL and independent recovery remain NOT VERIFIED.
