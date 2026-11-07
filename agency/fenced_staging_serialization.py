@@ -51,7 +51,7 @@ def staging_recover(journal, *, stop_unit=None):
         return recover_owned_units(journal, stop_unit=stop_unit)
 
 
-def staging_launch(journal, unit, launch):
+def staging_launch(journal, unit, launch, *, admit=None):
     """Gate and durably register before invoking an operator-supplied runner.
 
     A launch failure deliberately leaves the record pending. This is not a
@@ -60,7 +60,11 @@ def staging_launch(journal, unit, launch):
     """
     if not callable(launch):
         raise TypeError("Launch callback required")
+    if admit is not None and not callable(admit):
+        raise TypeError("Admission callback must be callable")
     with staging_journal_lock(journal):
         require_recovered(journal)
+        if admit is not None:
+            admit()
         register_before_launch(journal, unit)
         return launch()
