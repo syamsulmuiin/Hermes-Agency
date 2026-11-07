@@ -1570,3 +1570,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - On copies only: journal bootstrap PASS, pending/verified/rollback PASS, ledger replay-history preservation check PASS, `COPY_REHEARSAL=PASS`. No actual systemd cutover tested.
 - `PRODUCTION_CUTOVER_STATE_GATE=NO_GO`, `STATE_AUDIT_EXIT_CODE=2` expected fail-closed. Three production services remained active.
 - Still required: safe, authorized bootstrap/migration plan; full ledger replay semantics and pending grants audit; exclusive writer handover; recovery and rollback rehearsal with copied state. Do not create production journal or switch broker without explicit approval.
+
+## Cutover authorization and remaining code blocker (2026-11-07)
+- User explicitly authorized production cutover. This is authorization, not evidence that it has occurred.
+- Consolidated preparation acceptance PASS on VPS; production health 3/3; state gate NO_GO due absent ownership journal and absent signed grant consumption table.
+- Source audit of `agency/operator_control.py`: `dispatch_operator` handles `approve_and_execute` without a separately verified admission-freeze/quiescence mechanism. `serve_operator_forever` accepts requests while running. Therefore a socket switch/restart is not a safe exclusive handover.
+- `agency/fenced_staging_broker.py` serializes journal admission/recovery and consumes replay grants. This does not by itself freeze production operator requests or ensure old and new brokers cannot both accept.
+- Do not execute production cutover until the freeze/quiescence and exclusive handover are implemented, tested, and rollback-safe. No production service change has been made.
