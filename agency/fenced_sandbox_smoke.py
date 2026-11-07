@@ -20,7 +20,7 @@ def run(deployed):
         raise PermissionError("Missing candidate deployment")
     if not str(deployed).startswith("/opt/hermes-fenced-"):
         raise PermissionError("Only versioned /opt candidate directories accepted")
-    unit = "hermes-sandbox-" + secrets.token_hex(12) + ".service"
+    unit = "hermes-fenced-" + secrets.token_hex(16) + ".service"
     # Probe exact security directives without binding candidate socket or
     # opening live signing keys, ledgers or trusted databases.
     probe = ("import agency.fenced_broker_candidate, "
