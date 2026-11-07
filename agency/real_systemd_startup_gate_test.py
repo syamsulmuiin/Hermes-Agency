@@ -7,6 +7,8 @@ No production unit files or service overrides are modified.
 import argparse
 import os
 import secrets
+import sqlite3
+import sys
 import subprocess
 import tempfile
 import time
@@ -24,9 +26,15 @@ def exercise():
     with tempfile.TemporaryDirectory(prefix="hermes-gate-", dir="/run") as folder:
         os.chmod(folder, 0o700)
         marker = folder + "/started"
+        from .fenced_unit_journal import register_before_launch
+        journal = folder + "/owned.sqlite"
+        pending_unit = "hermes-fenced-" + secrets.token_hex(16) + ".service"
+        register_before_launch(journal, pending_unit)
+        # Test-only pending journal entry; no actual unit launched.
         gate = folder + "/gate"
         with open(gate, "w", encoding="ascii") as file:
-            file.write("#!/bin/sh\nexit 1\n")
+            file.write("#!/bin/sh\nexec " + sys.executable +
+                       " -m agency.fenced_startup_gate --journal " + journal + "\n")
         os.chmod(gate, 0o700)
         # systemd-run --property=ExecStartPre is not universally supported:
         # install only a uniquely named TEST service under /run/systemd/system.
@@ -53,10 +61,12 @@ def exercise():
             failure_detail = run("/usr/bin/systemctl", "status", "--no-pager", "--full", name + ".service")
             if b"status=203/EXEC" in failure_detail.stdout:
                 raise RuntimeError("Gate did not execute: systemd reported 203/EXEC")
-            print("real_execstartpre_failure_blocks_execstart=PASS", flush=True)
-            # Allow gate to succeed, then confirm only test service starts.
-            with open(gate, "w", encoding="ascii") as file:
-                file.write("#!/bin/sh\nexit 0\n")
+            print("real_journal_pending_blocks_execstart=PASS", flush=True)
+            # Simulate verified recovery in this private journal only.
+            with sqlite3.connect(journal) as db:
+                db.execute("UPDATE owned_units SET state='verified' WHERE unit=?",
+                           (pending_unit,))
+                db.commit()
             if run("/usr/bin/systemctl", "reset-failed", name + ".service").returncode:
                 raise RuntimeError("Could not reset test service")
             started = run("/usr/bin/systemctl", "start", name + ".service")
@@ -66,7 +76,7 @@ def exercise():
                 raise RuntimeError("Gate success failed to start test service: " + details[-4000:])
             if not os.path.isfile(marker):
                 raise AssertionError("ExecStart marker absent after recovery gate passed")
-            print("real_execstartpre_success_allows_execstart=PASS", flush=True)
+            print("real_journal_verified_allows_execstart=PASS", flush=True)
         finally:
             run("/usr/bin/systemctl", "stop", name + ".service")
             if os.path.exists(path):
