@@ -98,6 +98,14 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo,
     os.mkdir(operator_dir, 0o700)
     os.chown(operator_dir, identity.pw_uid, identity.pw_gid)
     operator_socket = operator_dir + "/operator.sock"
+    admission_lock = folder + "/staging-admission.lock"
+    fd = os.open(admission_lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o640)
+    try:
+        os.fchown(fd, 0, identity.pw_gid)
+        os.fchmod(fd, 0o640)
+    finally:
+        os.close(fd)
+    staging_freeze = folder + "/staging-admission.freeze"
     credential_secret = secrets.token_bytes(64)
     operator_secret = secrets.token_bytes(32)
     salt, verifier = LocalOperatorGate.provision(operator_secret)
@@ -110,7 +118,9 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo,
     args = ["--state-dir", state, "--database", db, "--key-dir", key_dir,
             "--secret-file", secret_path, "--operator-socket", operator_socket,
             "--operator-verifier", verifier_path, "--broker-key", broker_key,
-            "--broker-socket", broker_socket, "--worker-user", worker.pw_name]
+            "--broker-socket", broker_socket, "--worker-user", worker.pw_name,
+            "--staging-admission-lock", admission_lock,
+            "--staging-freeze-marker", staging_freeze]
     # Existing broker fixture may have created SQLite with process umask 022.
     # Normalize only disposable trusted files, using their owning UID.
     def prepare_private_database():
