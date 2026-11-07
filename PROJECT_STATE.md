@@ -498,3 +498,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Runtime output: `unused_signed_grant_prepared=PASS`, `unused_pre_rotation_grant_rejected=PASS`, `rejected_grant_no_execution=PASS`, two `supervised_trusted_adapter_to_systemd=PASS`, and `supervised_systemd=PASS worker_denied=PASS key_rotated_new_grants=PASS ledger=PASS`.
 - `hermes-agency.service` remained active. This validates the isolated hardened transient unit and key-rotation negative test, not full production unit equivalence or the live authenticated operator integration.
 - Next gate: inspect actual operator authentication/approval infrastructure and connect it to the running trusted process without worker-accessible broker issuance or production state changes until approved.
+
+## Authenticated operator integration design (2026-11-07)
+- Inspected live service implementation: `single_vps_service.py` / `service_lifecycle.py` expose only worker stage IPC, and `operator_auth.py` contains offline-provisioned scrypt verifier `LocalOperatorGate`.
+- Added `TrustedAgentExecution.approve_operator_request` to authenticate a local operator secret via `LocalOperatorGate` before calling the existing approval service. In-process method only; never added to worker IPC.
+- This does NOT yet establish an operator-only transport, rate limiting, credential provision on VPS, live service integration or production broker activation. No claims of completed live end-to-end authentication; runtime tests pending.
