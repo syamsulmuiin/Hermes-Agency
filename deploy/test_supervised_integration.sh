@@ -25,7 +25,10 @@ chmod 0711 "$BASE"
 install -d -m 0710 -o root -g "$TGID" "$BASE/socket"
 install -d -m 0700 -o "$TUID" -g "$TGID" "$BASE/trusted"
 install -d -m 0700 -o root -g root "$BASE/ledger"
-install -d -m 0700 -o root -g root "$BASE/keys"
+install -d -m 0710 -o root -g "$TGID" "$BASE/keys"
+install -d -m 0755 -o root -g root "$BASE/app"
+cp -a "$ROOT/agency" "$BASE/app/"
+chmod -R a+rX "$BASE/app/agency"
 python3 - "$BASE" "$TGID" <<'PY'
 import os, sys
 from agency.signed_broker_service import provision_broker_key
@@ -68,7 +71,7 @@ done
 if runuser -u "$WORKER_USER" -- python3 -c 'import socket,sys;s=socket.socket(socket.AF_UNIX);s.connect(sys.argv[1])' "$SOCK" >/dev/null 2>&1; then
   echo "SECURITY FAILURE: worker connected" >&2; exit 1
 fi
-runuser -u "$TRUSTED_USER" -- /usr/bin/python3 -m agency.supervised_integration_client \
+runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_integration_client \
   --database "$DB" --credential-key "$BASE/trusted/credential.key" \
   --broker-key "$KEY" --socket "$SOCK"
 python3 - "$KEY" "$TUID" "$TGID" <<'PY'
