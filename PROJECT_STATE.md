@@ -1316,3 +1316,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## PID 1 crash recovery hardening (2026-11-07)
 - Added `ExecStopPost` to inactive fenced broker candidate unit to invoke independent root-owned journal recovery on main service stop, including abnormal termination. `OnFailure` remains an additional trigger. The static preflight now requires `ExecStopPost`; updated negative test fixture. Commits `67b982a`, `865d818`, `c2f8db8`.
 - Not yet tested with real systemd/SIGKILL. No assurance of recovery until live isolation tests confirm stop/verify, systemd sandbox access, lock behavior, and restart ordering. Do not install/enable/cut over without explicit operator approval.
+
+## One-command combined staging acceptance (2026-11-07)
+- Added `python3 -m agency.combined_fenced_acceptance --execute` (commits `ffc0742`, `a062db2`). Runs candidate framing, socket, broker/recovery regressions, static systemd candidate preflight, all unit tests, real staging crash suite, race suite, integrated broker SIGKILL/OnFailure recovery, and verifies both active production services remain active. Fail-fast, no production cutover.
+- IMPORTANT LIMITATION: this combined suite does NOT yet execute the actual persistent `fenced_broker_candidate` service under systemd with real signed-grant submission, replay, lease fencing and SIGKILL. Its candidate socket test uses mocks, while real SIGKILL tests exercise the staging broker. The suite prints `PERSISTENT_CANDIDATE_END_TO_END_VERIFIED=NO` and `PRODUCTION_CUTOVER_AUTHORIZED=NO` even on PASS. Never equate staging PASS with production readiness.
+- Await VPS execution and logs. Do not change active production service.
