@@ -475,3 +475,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator VPS reported `bash deploy/test_supervised_integration.sh` EXIT_CODE=0: two `supervised_trusted_adapter_to_systemd=PASS`, `supervised_systemd=PASS worker_denied=PASS key_rotated_new_grants=PASS ledger=PASS`.
 - Existing `hermes-agency.service` remained active. This proves transient systemd supervised broker and isolated trusted UID client E2E, not live production trusted-service integration.
 - Remaining gates: explicitly reject pre-rotation unused signed grant after key rotation, verify production unit hardening, and connect real running trusted service via authenticated operator-only path; no production activation yet.
+
+## Production broker unit static audit (2026-11-07)
+- Added `agency/broker_unit_audit.py` and 2 tests: checks exact opt-in production example's security-critical unit directives, bounded writable paths and signed-only entrypoint; negative test rejects weakened ProtectSystem. Expected suite 196 tests, VPS pending.
+- This is STATIC configuration verification, NOT systemd execution with the production unit. A systemd-analyze verify and live test of production-equivalent hardening are still required.
+- No live trusted service code or worker protocol changed. Operator-only live service integration and pre-rotation unused grant rejection are NOT yet implemented or proven. Do not activate production broker.
