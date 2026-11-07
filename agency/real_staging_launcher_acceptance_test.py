@@ -36,7 +36,7 @@ def exercise():
     with tempfile.TemporaryDirectory(prefix="accept-", dir=base) as folder:
         os.chmod(folder, 0o711)
         journal = folder + "/owned.sqlite"
-        database = folder + "/trusted.sqlite"
+        # SQLite rollback journal requires write access to the DB directory.\n        # Keep the root-owned ownership journal outside this trusted subdir.\n        trusted_dir = folder + "/trusted"\n        os.mkdir(trusted_dir, 0o700)\n        os.chown(trusted_dir, identity.pw_uid, identity.pw_gid)\n        database = trusted_dir + "/trusted.sqlite"
         key = secrets.token_bytes(32)
         now = time.time()
         claims = {
