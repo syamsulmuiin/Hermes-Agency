@@ -3,7 +3,6 @@
 Never changes production state. A report is not cutover authorization.
 """
 import argparse
-import hashlib
 import os
 import pathlib
 import stat
@@ -90,12 +89,19 @@ def audit():
                 blockers.append("Installed recovery unit lacks owned recovery entrypoint")
         except (OSError, PermissionError, subprocess.TimeoutExpired) as exc:
             blockers.append(unit + ": installed systemd wiring not verifiable (" + type(exc).__name__ + ")")
+    # Distinguish locally observed state from external acceptance evidence.
+    # Prior manual tests are not durable attestations; never auto-promote them.
+    evidence.append("CANDIDATE_ROUTE_UNIT_TESTS=EXTERNAL_RESULT_NOT_ATTESTED")
+    evidence.append("TMPFILES_EMPTY_DIRECTORY_TEST=EXTERNAL_RESULT_NOT_ATTESTED")
+    evidence.append("LIVE_ADMISSION_FLOCK_TEST=EXTERNAL_RESULT_NOT_ATTESTED")
+    evidence.append("PRODUCTION_BOOT_FROM_EMPTY_RUN=NOT_TESTED")
     # These are live behavioral properties; filesystem inspection cannot prove them.
     blockers.extend((
         "Live sidecar admission-lock participation not behaviorally attested",
         "Exclusive production drain and inode stability not behaviorally attested",
         "Production-route handover and rollback not acceptance-tested",
         "Independent PID1 recovery wiring for deployed candidate not attested",
+        "Admission provisioning boot from empty /run not attested",
     ))
     for item in evidence:
         print("STAGE1_EVIDENCE=" + item)
