@@ -848,3 +848,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation to 499a4af and ran eight unittest modules (fenced_broker_unit_lifecycle, fenced_systemd_supervisor, fence_process_supervisor, fenced_broker_ledger, trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants).
 - Result: 37 tests in 1.084s, OK, TEST_EXIT_CODE=0. Counts: 4 broker-unit lifecycle, 5 mocked systemd guard, 4 subprocess supervisor, 1 ledger, 5 IPC, 5 lease fence, 6 broker socket, 7 signed grants.
 - These are unit/mocked and fake-executor tests, not a real systemd transient unit or forced root broker crash test. Broker abrupt-crash watchdog/recovery and production listener integration remain blocked. No production service changes or restarts.
+
+
+## Independent fenced systemd orphan recovery primitive (2026-11-07)
+- Commit af87e6f: added agency/fenced_unit_recovery.py. Root-only opt-in recovery enumerates loaded hermes-fenced-<32hex>.service units, rejects malformed names or failed enumeration, stops and verifies each via existing systemd guard, fails closed on any unsuccessful cleanup. Requires externally assured broker_stopped=True; never accesses trusted SQLite or issues grants.
+- Commit 4da6919: added six mocked recovery tests. NOT YET RUN on VPS.
+- Critical integration pending: no independent recovery service/unit is installed, no systemd broker stop/start ordering or restart gate is enforced, and no broker crash injection test has been performed. Passing broker_stopped=True alone is not a proof the broker is stopped; only trusted external orchestration may supply it. Do not enable production or run real noop yet.
