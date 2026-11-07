@@ -90,6 +90,24 @@ class ReadinessReportTests(unittest.TestCase):
         self.assertIn("Candidate content digest and deployment manifest not attested",
                       output.getvalue())
 
+    def test_installed_recovery_wiring_does_not_clear_pid1_blocker(self):
+        with patch.object(stages, "_show", side_effect=PermissionError("isolated")), \
+             patch.object(stages, "_regular", return_value=False), \
+             patch.object(stages.pathlib.Path, "is_dir", return_value=False), \
+             patch("agency.production_recovery_wiring_evidence.inspect",
+                   return_value={"installed_recovery_wiring": "PASS",
+                                 "pid1_behavior": "NOT_ATTESTED",
+                                 "cutover_authorized": False}), \
+             patch("agency.production_runtime_evidence.capture",
+                   side_effect=PermissionError("isolated")):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = stages.audit()
+        self.assertEqual(result, 2)
+        self.assertIn("INSTALLED_PID1_RECOVERY_WIRING=PASS", output.getvalue())
+        self.assertIn("Independent PID1 recovery wiring for deployed candidate not attested",
+                      output.getvalue())
+
     def test_stage2_remains_plan_only(self):
         output = io.StringIO()
         with redirect_stdout(output):
