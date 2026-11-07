@@ -140,7 +140,7 @@ def serve_once(path, trusted_uid, db_path):
 
 
 def execute_signed_grant(db_path, envelope, verification_key,
-                         executor=run_systemd_job, now=None):
+                         executor=run_systemd_job, now=None, trusted_db_path=None):
     """Consume a verified trusted grant once before invoking fixed systemd job.
 
     This is a distinct protocol from legacy operator approvals. The key must
@@ -148,6 +148,9 @@ def execute_signed_grant(db_path, envelope, verification_key,
     """
     from .broker_grants import verify_broker_grant
     claims = verify_broker_grant(envelope, verification_key, now=now)
+    if trusted_db_path is not None:
+        from .broker_grants import verify_live_lease
+        verify_live_lease(trusted_db_path, claims, now=now)
     verify_private_ledger(db_path)
     db = sqlite3.connect(db_path, timeout=5, isolation_level=None)
     try:
@@ -174,3 +177,34 @@ def execute_signed_grant(db_path, envelope, verification_key,
         return result
     finally:
         db.close()
+
+
+def handle_signed_connection(conn, trusted_uid, ledger_path, trusted_db_path,
+                             verification_key, executor=run_systemd_job, now=None):
+    """Separate opt-in signed-grant socket protocol; no legacy fallback."""
+    credentials = conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12)
+    if struct.unpack("3i", credentials)[1] != trusted_uid:
+        raise PermissionError("Untrusted signed broker peer")
+    conn.settimeout(5)
+    data = bytearray()
+    while len(data) <= 4096 and b"\\n" not in data:
+        chunk = conn.recv(512)
+        if not chunk:
+            break
+        data.extend(chunk)
+    if len(data) > 4096 or not data.endswith(b"\\n") or data.count(b"\\n") != 1:
+        raise PermissionError("Invalid signed broker framing")
+    try:
+        request = json.loads(data)
+    except (ValueError, UnicodeError) as exc:
+        raise PermissionError("Invalid signed broker JSON") from exc
+    if not isinstance(request, dict) or set(request) != {"grant"}:
+        raise PermissionError("Invalid signed broker schema")
+    from .broker_grants import verify_live_lease, verify_broker_grant
+    claims = verify_broker_grant(request["grant"], verification_key, now=now)
+    verify_live_lease(trusted_db_path, claims, now=now)
+    result = execute_signed_grant(ledger_path, request["grant"], verification_key,
+                                  executor=executor, now=now,
+                                  trusted_db_path=trusted_db_path)
+    conn.sendall((json.dumps(result) + "\\n").encode())
+    return result
