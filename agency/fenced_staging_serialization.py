@@ -34,7 +34,16 @@ def staging_journal_lock(journal):
                 raise PermissionError("Unsafe launch lock")
             fcntl.flock(fd, fcntl.LOCK_EX)
             try:
+                def verify_lock_inode():
+                    current = os.stat(lock_name, dir_fd=directory_fd,
+                                      follow_symlinks=False)
+                    if (current.st_dev != info.st_dev or current.st_ino != info.st_ino
+                            or current.st_nlink != 1):
+                        raise PermissionError("Launch lock inode changed")
+
+                verify_lock_inode()
                 yield
+                verify_lock_inode()
             finally:
                 fcntl.flock(fd, fcntl.LOCK_UN)
         finally:
