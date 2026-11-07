@@ -125,9 +125,14 @@ def run():
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         def running():
             with sqlite3.connect(ledger) as db:
-                row = db.execute(
-                    "SELECT status FROM signed_grant_consumptions WHERE grant_id=?",
-                    (claims["id"],)).fetchone()
+                try:
+                    row = db.execute(
+                        "SELECT status FROM signed_grant_consumptions WHERE grant_id=?",
+                        (claims["id"],)).fetchone()
+                except sqlite3.OperationalError as exc:
+                    if "no such table: signed_grant_consumptions" not in str(exc):
+                        raise
+                    return False
             return row == ("started",) and active(unit)
         wait_for(running, "Real signed job not active before crash")
         print("PID1_REAL_BROKER_ACTIVE_SIGNED_JOB=PASS", flush=True)
