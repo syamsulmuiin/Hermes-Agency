@@ -125,9 +125,14 @@ def main(argv=None):
     stopping = [False]
     signal.signal(signal.SIGTERM, lambda *_: stopping.__setitem__(0, True))
     signal.signal(signal.SIGINT, lambda *_: stopping.__setitem__(0, True))
+    session = run_staging_session
+    if args.isolated_test:
+        # Only the explicitly isolated fixture profile may substitute a test runner.
+        from .isolated_candidate_runner import isolated_session
+        session = isolated_session
     serve_candidate(args.socket, identity.pw_uid, identity.pw_gid,
                     args.ledger, args.journal, args.trusted_db, args.key,
-                    stop=lambda: stopping[0],
+                    stop=lambda: stopping[0], session=session,
                     isolated_candidate=args.isolated_test)
 
 
