@@ -47,15 +47,19 @@ class BrokerFencedLedgerTests(unittest.TestCase):
                     competitor.execute(
                         "DELETE FROM task_leases WHERE task_id=?", (self.task,))
             return {"exit_code": 0}
+        def supervised_job(name, fence, unit):
+            return job(name)
         try:
-            with patch("agency.systemd_broker.verify_private_ledger"):
+            with patch("agency.systemd_broker.verify_private_ledger"), \
+                 patch("agency.fenced_systemd_supervisor.stop_and_verify_unit"):
                 result = execute_fenced_signed_grant(
-                    ledger, self.grant, self.key, path, executor=job, now=100)
+                    ledger, self.grant, self.key, path,
+                    supervised_executor=supervised_job, now=100)
                 self.assertEqual(result["exit_code"], 0)
                 with self.assertRaises(PermissionError):
                     execute_fenced_signed_grant(
                         ledger, self.grant, self.key, path,
-                        executor=job, now=100)
+                        supervised_executor=supervised_job, now=100)
             self.assertEqual(executions, ["noop"])
             with sqlite3.connect(ledger) as db:
                 rows = db.execute(
