@@ -959,3 +959,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Real systemd gate now connected to isolated durable journal (2026-11-07)
 - Commits b3e42a8 and 5b92f53 update `agency/real_systemd_startup_gate_test.py`: `ExecStartPre` invokes `agency.fenced_startup_gate` against a private `/run/hermes-gate-*/owned.sqlite` journal. A pending row must block `ExecStart`; test-only direct transition to verified then permits `ExecStart`. The test does NOT launch an actual pending unit or run recovery; the verified transition is simulated. No production service modifications.
 - This updated integration has NOT been tested on VPS. Independent automatic recovery and actual trusted lease IPC with SQLite remain unimplemented. Next: real recovery ordering and sidecar lifetime coupling, then end-to-end acceptance.
+
+
+## Journal-backed real systemd startup gate VPS PASS (2026-11-07)
+- Operator pulled development/foundation at db9d1a1 and ran `python3 -m agency.real_systemd_startup_gate_test --execute`.
+- Output: `real_journal_pending_blocks_execstart=PASS`, `real_journal_verified_allows_execstart=PASS`, `JOURNAL_GATE_EXIT_CODE=0`.
+- Confirms real ExecStartPre calls root-only journal gate: pending blocks ExecStart; simulated verified transition permits it. Does NOT prove independent automatic recovery after broker SIGKILL or actual trusted UID lease IPC and SQLite fence lifetime. Production unchanged.
