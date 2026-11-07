@@ -103,10 +103,12 @@ def run():
                          "OnFailure=" + recovery_name + "\n"
                          "[Service]\nType=simple\nRestart=no\n"
                          "WorkingDirectory=" + repo + "\n"
+                         "Environment=PYTHONDONTWRITEBYTECODE=1\n"
                          "Environment=HERMES_ISOLATED_HOLD_MARKER=" + marker + "\n"
                          "ExecStart=" + broker_cmd + "\n")
         recovery_config = ("[Unit]\nDescription=Isolated real candidate recovery\n"
                            "[Service]\nType=oneshot\n"
+                           "Environment=PYTHONDONTWRITEBYTECODE=1\n"
                            "ExecStart=" + python + " " + recovery_script + "\n")
         for path, data in ((broker_file, broker_config),
                            (recovery_file, recovery_config)):
