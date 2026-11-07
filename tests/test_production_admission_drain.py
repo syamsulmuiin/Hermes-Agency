@@ -12,6 +12,9 @@ class AdmissionDrainTests(unittest.TestCase):
     def test_replaced_inode_denied(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "admission.lock")
+            with open(path, "wb"):
+                pass
+            os.chmod(path, 0o640)
             with operator_admission_lease(path):
                 pass
             original = os.stat(path)
@@ -27,6 +30,9 @@ class AdmissionDrainTests(unittest.TestCase):
     def test_exclusive_drain_blocks_new_shared_admission(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "admission.lock")
+            with open(path, "wb"):
+                pass
+            os.chmod(path, 0o640)
             with operator_admission_lease(path):
                 with patch.object(drain, "LOCK", path), patch.object(
                         drain.os, "geteuid", return_value=0):
