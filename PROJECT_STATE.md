@@ -790,3 +790,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_trusted_lease_ipc_long_job.py (6c07a3e): fake job sleeps 10.25 seconds, asserts SQLite revocation is still blocked and lock releases after completion. No production job is run.
 - Extended tests/test_trusted_lease_ipc.py (6d17698): reject incorrect SO_PEERCRED root UID and malformed completion; ensure lock released after malformed completion.
 - These 3 new cases are NOT YET EXECUTED on VPS. Production broker/ledger integration and crash-safe systemd job supervision are still missing. Do not deploy or claim production acceptance.
+
+
+## Expanded IPC test evidence (2026-11-07 02:13 UTC)
+- Operator reported VPS checkout already up to date and executed 5 unittest modules: trusted_lease_ipc_long_job, trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants.
+- Result: 24 tests in 11.070s, OK, TEST_EXIT_CODE=0. New 10.25-second fake job kept trusted SQLite lock through the previous 10-second timeout boundary; wrong peer UID rejected; invalid completion released lock. No real systemd job was run.
+- Production IPC wiring, replay ledger integration, sidecar/broker crash supervision, and actual approved noop acceptance remain pending; this is not production approval.
