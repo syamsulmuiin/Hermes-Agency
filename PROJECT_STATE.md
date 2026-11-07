@@ -1312,3 +1312,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Candidate socket regression (2026-11-07)
 - Added `tests/test_fenced_candidate_socket.py` for a local Unix socket request/response round trip against `serve_candidate`, with identity, permissions, signed-grant and session dependencies mocked; no real root or systemd execution. Commits `c824225`, `ccd55cd`.
 - This is NOT an end-to-end signed grant + trusted lease + systemd crash test. No test run on VPS is evidenced; do not claim candidate acceptance or production readiness. Existing production service unchanged.
+
+## PID 1 crash recovery hardening (2026-11-07)
+- Added `ExecStopPost` to inactive fenced broker candidate unit to invoke independent root-owned journal recovery on main service stop, including abnormal termination. `OnFailure` remains an additional trigger. The static preflight now requires `ExecStopPost`; updated negative test fixture. Commits `67b982a`, `865d818`, `c2f8db8`.
+- Not yet tested with real systemd/SIGKILL. No assurance of recovery until live isolation tests confirm stop/verify, systemd sandbox access, lock behavior, and restart ordering. Do not install/enable/cut over without explicit operator approval.
