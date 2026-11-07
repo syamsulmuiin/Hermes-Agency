@@ -26,14 +26,14 @@ class BootstrapSafetyTests(unittest.TestCase):
     def test_inactive_but_queued_job_fails_closed(self):
         class Result:
             returncode = 0
-            stdout = b"LoadState=loaded\\nActiveState=inactive\\nMainPID=0\\nJob=99\\n"
+            stdout = b"LoadState=loaded\nActiveState=inactive\nMainPID=0\nJob=99\n"
         with patch.object(module.subprocess, "run", return_value=Result()):
             self.assertFalse(module._inactive("hermes-signed-broker.service"))
 
     def test_stopped_without_pid_or_job(self):
         class Result:
             returncode = 0
-            stdout = b"LoadState=loaded\\nActiveState=inactive\\nMainPID=0\\nJob=0\\n"
+            stdout = b"LoadState=loaded\nActiveState=inactive\nMainPID=0\nJob=0\n"
         with patch.object(module.subprocess, "run", return_value=Result()):
             self.assertTrue(module._inactive("hermes-signed-broker.service"))
 
