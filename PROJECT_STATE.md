@@ -747,3 +747,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Target architecture: trusted UID owns the SQLite BEGIN IMMEDIATE transaction for the complete fixed-job execution; broker retains key verification, SO_PEERCRED, fixed-job allowlist, replay ledger, and systemd invocation. New private trusted lease-fencing IPC must authenticate root broker peer, cryptographically bind request to exact signed grant and single-use grant ID, support acquire/finish/abort with bounded lifetime, and fail closed on disconnect or sidecar crash. Avoid expanding broker ReadWritePaths to trusted DB and never expose worker socket or signing key.
 - Required race tests: revoke-before-acquire denied; revoke-during-execution blocked; timeout/disconnect releases lock and fails closed; duplicate grant rejected; concurrent distinct grants serialize correctly; broker crash cannot silently authorize execution; ledger started/completed/failed reflects job outcome. Test with real isolated systemd noop and throwaway SQLite/key/socket before production deployment.
 - Current implementation status: DESIGN/REVIEW ONLY; no production code, service configuration, or live acceptance changed. Do not mark production ready until implementation and all gates pass.
+
+
+## Trusted lease fencing primitive implemented (2026-11-07)
+- Added agency/trusted_lease_fence.py in commit 138f52c2182058b06fc6ce2c0cc34aad8e9d348a. The context manager opens the trusted DB rw, holds BEGIN IMMEDIATE, verifies live lease on that connection, and rolls back/releases lock on all exits.
+- Added tests/test_trusted_lease_fence.py in commit 35de0b641bb2e5c85223e83b99f86ccd1ed13a78 with 5 cases: writer contention, revoked lease, expiry, exception cleanup, invalid path.
+- These new tests have NOT been run on the VPS yet. The primitive is not wired into operator sidecar IPC or broker; existing production code and services remain unchanged. Do not mark end-to-end production acceptance complete.
+- Next: run tests, design authenticated single-use broker-to-trusted permit protocol, integrate transaction lifetime and failure handling, then isolated real noop and ledger acceptance.
