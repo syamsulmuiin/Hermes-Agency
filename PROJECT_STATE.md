@@ -949,3 +949,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation at fada2f4 and ran `python3 -m agency.real_systemd_startup_gate_test --execute`.
 - Output: `real_execstartpre_failure_blocks_execstart=PASS`, `real_execstartpre_success_allows_execstart=PASS`, `STARTUP_GATE_EXIT_CODE=0`.
 - Confirms isolated real systemd ExecStartPre script failure blocks ExecStart, and success permits ExecStart. Does NOT yet test journal-backed gate, actual trusted lease IPC or automatic recovery after crash. Production service unchanged.
+
+
+## Journal-backed startup gate foundation (2026-11-07)
+- Commit 14c8c28 adds `agency/fenced_startup_gate.py` with root-only, read-only fail-closed `require_recovered(journal)`; rejects missing journal, invalid unit/state, or any pending ownership. No recovery or job launch occurs inside the gate.
+- This is NOT wired to real test systemd ExecStartPre yet and has NOT been VPS-tested. Independent automatic recovery after SIGKILL and real trusted UID lease IPC end-to-end remain open. No production modifications.
