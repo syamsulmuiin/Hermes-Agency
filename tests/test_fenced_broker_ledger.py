@@ -10,12 +10,12 @@ from unittest.mock import patch
 
 from agency.systemd_broker import execute_fenced_signed_grant
 from agency.trusted_lease_ipc import serve_fence_connection
-from tests.test_trusted_lease_ipc import TrustedLeaseIPCTests
+import tests.test_trusted_lease_ipc as ipc_fixtures
 
 
 class BrokerFencedLedgerTests(unittest.TestCase):
-    setUp = TrustedLeaseIPCTests.setUp
-    tearDown = TrustedLeaseIPCTests.tearDown
+    setUp = ipc_fixtures.TrustedLeaseIPCTests.setUp
+    tearDown = ipc_fixtures.TrustedLeaseIPCTests.tearDown
     def test_atomic_consumption_replay_and_fence(self):
         ledger = str(Path(self.tmp.name) / "ledger.sqlite")
         sqlite3.connect(ledger).close()
