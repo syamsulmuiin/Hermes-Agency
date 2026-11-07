@@ -31,8 +31,11 @@ def exercise():
     base = "/run/hermes-staging"
     os.makedirs(base, mode=0o700, exist_ok=True)
     info = os.lstat(base)
-    if info.st_uid != 0 or info.st_mode & 0o077:
+    if info.st_uid != 0 or info.st_mode & 0o022:
         raise PermissionError("Unsafe staging root")
+    # Non-root trusted peer must traverse this root-owned staging parent.
+    # No directory listing or non-root writes are granted.
+    os.chmod(base, 0o711)
     with tempfile.TemporaryDirectory(prefix="accept-", dir=base) as folder:
         os.chmod(folder, 0o711)
         journal = folder + "/owned.sqlite"
