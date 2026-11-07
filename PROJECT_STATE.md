@@ -1428,3 +1428,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Pinned deployment sandbox systemd smoke PASS (2026-11-07)
 - Operator VPS pulled `413b40c` and reran `python3 -m agency.fenced_sandbox_smoke --deployed /opt/hermes-fenced-377abe8b948b --execute`: `CANDIDATE_ACTUAL_SANDBOX_IMPORTS=PASS`, `PRODUCTION_CUTOVER_EXECUTED=NO`, `SANDBOX_EXIT_CODE=0`. Both production services active.
 - Confirms candidate imports with selected real systemd transient sandbox directives and cleanup, not the exact persistent candidate unit, DB/key/socket access or independent PID1 ordering. Next: validate those in isolated staging without touching live service.
+
+## Resource audit and final cutover/rollback planning (2026-11-07)
+- GitHub `33d15a3`: added explicit opt-in read-only real systemd candidate resource metadata audit, using pinned /opt deployment, candidate sandbox and random fenced transient unit. It does not read key bytes, mutate DB/ledger/journal or start broker. VPS result PENDING; no claim of resource write acceptance.
+- GitHub `7b439e7`: expanded `docs/FENCED_PRODUCTION_CUTOVER_RUNBOOK.md` with bounded metadata test, full resource write/peer authorization/PID1 recovery and caller routing acceptance criteria, explicit no-go cutover decision and conditional rollback decision tree. No production unit modified. Exact staging manifest and integration tests still pending; no production cutover authorized.
