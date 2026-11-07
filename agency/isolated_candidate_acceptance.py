@@ -41,6 +41,9 @@ def until(fn, seconds=20):
 
 def real_operator_grants(dbpath, keypath, identity):
     """Create approved grants inside a disposable non-root staging process."""
+    # Import before setuid: checkout may be under /root, inaccessible to nobody.
+    from pathlib import Path
+    from .trusted_broker_adapter import _trusted_key
     read_fd, write_fd = os.pipe()
     pid = os.fork()
     if pid == 0:
@@ -49,8 +52,6 @@ def real_operator_grants(dbpath, keypath, identity):
             os.setgroups([])
             os.setgid(identity.pw_gid)
             os.setuid(identity.pw_uid)
-            from pathlib import Path
-            from .trusted_broker_adapter import _trusted_key
             store = SecureAgencyStore(Path(dbpath))
             service = TrustedApprovalService(store, secrets.token_bytes(32))
             operator_secret = secrets.token_bytes(32)
