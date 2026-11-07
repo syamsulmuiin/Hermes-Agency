@@ -74,7 +74,7 @@ class RealSocketCutoverAdapter(IsolatedSystemdAdapter):
         if not response.startswith("{") or json.loads(response).get("exit_code") != 0:
             with open(os.path.dirname(self.socket_path) + "/candidate.log", "rb") as log:
                 detail = log.read()[-3000:].decode("utf-8", "replace")
-            raise AssertionError("Real candidate did not execute signed grant: " + response + "\\nCandidate diagnostic: " + detail)
+            raise AssertionError("Real candidate did not execute signed grant: " + response + "\nCandidate diagnostic: " + detail)
         self.consumed.add(self.grant_id)
         if self._submit() != "DENIED_NO_REPLY":
             raise AssertionError("Real socket accepted replay")
@@ -159,7 +159,7 @@ def run():
                   "task": "test-task", "worker": "test-worker",
                   "lease_generation": 1, "job": "noop",
                   "params_hash": fingerprint({"job": "noop"}),
-                  "iat": now, "exp": now + 90}
+                  "iat": now, "exp": now + 55}
         grant = {"claims": claims, "signature":
                  hmac.new(key, _canonical(claims), hashlib.sha256).hexdigest()}
         fixture(database, claims)
