@@ -34,3 +34,9 @@ The candidate unit has `WorkingDirectory=/opt/hermes-agency` and `ProtectHome=ye
 - Deploy from a pinned GitHub revision to `/opt/hermes-agency` only after inspecting the existing deployment layout and preserving its service configuration. Never repair production by copying a single module from `/root` or replacing the entire `/opt` directory blindly.
 - `systemd-analyze security` must be run against a real loadable unit name or correctly registered temporary unit; the previous relative-file invocation returned `Unit ... not found` and did not assess sandbox security. Static `systemd-analyze verify` exit 0 alone is insufficient.
 - Every deployment fix must first be committed to `development/foundation`, then installed from that exact revision, and tested before a production cutover.
+
+## Versioned, non-disruptive deployment preparation
+- VPS inventory confirmed `/opt/hermes-agency` is a stale live deployment missing seven fenced modules. Do **not** overwrite it or redirect live units to `/root`.
+- From the clean development checkout, run `python3 -m agency.fenced_prepare_deployment` for dry-run, then `python3 -m agency.fenced_prepare_deployment --execute` to create a *new*, pinned `/opt/hermes-fenced-<revision>` directory. The script clones committed Git content locally and never edits `/opt/hermes-agency`, unit files, keys, databases or live sockets. It does not activate services.
+- The existing candidate unit manifest still targets `/opt/hermes-agency`; it must not be started against the new directory without an independently reviewed, GitHub-tracked staging manifest, sandbox validation and rollback checks.
+- A prepared directory is not proof of sandbox or production readiness. Production cutover remains blocked.
