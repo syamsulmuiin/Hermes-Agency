@@ -927,3 +927,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation to 8d19bbd and reran `python3 -m agency.real_systemd_crash_acceptance --execute`.
 - Output: `real_sigkill_recovery=PASS`, `startup_pending_failure_gate=PASS (application gate only)`, `socket_fence_eof_cleanup=PASS (not trusted lease IPC)`, `REAL_SYSTEMD_TEST_EXIT_CODE=0`.
 - Demonstrates real transient-unit stop/recovery after SIGKILL of isolated test broker and real unit stop on synthetic socket EOF. Does NOT establish actual systemd ExecStartPre startup gating, real trusted lease/SQLite IPC disconnect safety, or automatic independent recovery after crash. Production untouched.
+
+
+## Three-track real lifecycle acceptance requested (2026-11-07)
+- Real systemd gate: commit 2c4a746 adds opt-in agency/real_systemd_startup_gate_test.py. Creates only a randomly named test unit in /run/systemd/system, verifies failing ExecStartPre blocks ExecStart marker and succeeding ExecStartPre permits it, then removes test unit. NOT RUN on VPS. This test uses systemctl daemon-reload and does not exercise the actual durable journal recovery CLI.
+- Real trusted lease IPC end-to-end and automatic recovery on SIGKILL remain NOT IMPLEMENTED/NOT VERIFIED. Existing socketpair EOF acceptance is not a substitute. Do not claim the three-track acceptance is complete. Production service unchanged.
