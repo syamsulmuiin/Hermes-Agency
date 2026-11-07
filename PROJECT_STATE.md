@@ -860,3 +860,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation to 679560e and ran nine unittest modules: fenced_unit_recovery, fenced_broker_unit_lifecycle, fenced_systemd_supervisor, fence_process_supervisor, fenced_broker_ledger, trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants.
 - Result: 43 tests in 1.134s, OK, TEST_EXIT_CODE=0. All six mocked recovery tests passed; no duplicate test discovery.
 - No real broker crash, transient unit execution, independent systemd recovery service or startup/shutdown gate was exercised. Production remains unchanged and real noop acceptance blocked pending independent orchestration and isolated crash tests.
+
+
+## Opt-in systemd lifecycle recovery hooks (2026-11-07)
+- Commit 8e096f4: added CLI to agency.fenced_unit_recovery, returning nonzero on recovery failure. Explicit --broker-stopped is a caller assertion, NOT independently verified broker state.
+- Commit c756f5c: added NON-INSTALLED deploy/examples/20-fenced-recovery.conf with ExecStartPre and ExecStopPost recovery hooks. Must not be deployed until deployment Python paths, startup ordering and crash safety are verified.
+- Commit d58e6e1: three isolated recovery lifecycle CLI tests added; NOT YET RUN on VPS. No real crash injection performed.
+- SECURITY BLOCKER: scanning systemctl list-units alone is not durable unit ownership; transient units can be unloaded. Hooks do not cover out-of-band broker processes or guarantee the trusted lease remains locked until independent cleanup after broker death. Add durable unit registry and systemd lifecycle coupling, then isolated crash tests, before enabling or real noop acceptance.
