@@ -237,14 +237,13 @@ def execute_fenced_signed_grant(db_path, envelope, verification_key,
                 # Do not impose the handshake timeout on the fixed job.
                 fence.settimeout(None)
                 if supervised_executor is None:
-                    result = executor(claims["job"])
-                else:
-                    # A supervisor receives the live fence FD and a unique,
-                    # grant-derived unit identity; no client-provided unit.
-                    # It MUST stop and verify any launched unit on EOF/error.
-                    from .fenced_systemd_supervisor import supervised_fenced_unit
-                    result = supervised_fenced_unit(
-                        claims["job"], claims["id"], fence, supervised_executor)
+                    raise PermissionError("Fenced supervisor required")
+                # A supervisor receives the live fence FD and a unique,
+                # grant-derived unit identity; no client-provided unit.
+                # It MUST stop and verify any launched unit on EOF/error.
+                from .fenced_systemd_supervisor import supervised_fenced_unit
+                result = supervised_fenced_unit(
+                    claims["job"], claims["id"], fence, supervised_executor)
                 # An uncertain fence completion is a failed attempt, never
                 # a successful broker response or an opportunity to replay.
                 _send(fence, {"status": "done", "grant_id": claims["id"]})
