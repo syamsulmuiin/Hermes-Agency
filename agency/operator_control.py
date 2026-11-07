@@ -83,8 +83,8 @@ def load_operator_verifier(path):
 def dispatch_operator(boundary, request, verifier, broker_key_path, broker_socket_path):
     """Authenticate and decide; broker execution is only after actual approval."""
     operator_identity, salt, proof = verifier
-    # Fail closed while a root-owned maintenance freeze is present.
-    # The trusted sidecar can read this marker but cannot remove it.
+    # Cooperative maintenance marker; not a security boundary or drain lock.
+    # A race remains between this check and broker execution.
     freeze = "/run/hermes-operator/admission.freeze"
     if os.path.lexists(freeze):
         raise PermissionError("Operator admission frozen for maintenance")
