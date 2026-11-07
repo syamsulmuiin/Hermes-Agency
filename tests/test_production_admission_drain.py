@@ -28,6 +28,33 @@ class AdmissionDrainTests(unittest.TestCase):
                         pass
             self.assertEqual(os.stat(path).st_ino, original.st_ino)
 
+    def test_missing_and_unsafe_lock_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "admission.lock")
+            with self.assertRaises(FileNotFoundError):
+                with operator_admission_lease(path):
+                    pass
+            with open(path, "wb"):
+                pass
+            os.chmod(path, 0o666)
+            with self.assertRaisesRegex(PermissionError, "Unsafe admission lock"):
+                with operator_admission_lease(path):
+                    pass
+
+    def test_inode_replacement_during_admission_denied(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "admission.lock")
+            replacement = os.path.join(directory, "replacement")
+            with open(path, "wb"):
+                pass
+            os.chmod(path, 0o640)
+            with self.assertRaisesRegex(PermissionError, "inode changed during"):
+                with operator_admission_lease(path):
+                    os.rename(path, replacement)
+                    with open(path, "wb"):
+                        pass
+                    os.chmod(path, 0o640)
+
     def test_exclusive_drain_blocks_new_shared_admission(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "admission.lock")
