@@ -1407,3 +1407,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS dry-run and explicit preparation both selected source revision `377abe8b948b1857a5f1d5c3cfad7379d3a1a713`, target `/opt/hermes-fenced-377abe8b948b`; `CANDIDATE_DEPLOYMENT_PREPARED=PASS`, exit 0. Production cutover NO, both production services active.
 - The staged tree is a frozen snapshot; later development commits do not automatically update it. Before a staged service test, verify import resolution and the exact candidate revision; test-only unit must use isolated socket/journal/ledger and must not bind existing production paths.
 - Pending: real systemd sandbox/permission test and signed-grant/recovery integration against the pinned staged tree. Do not activate production candidate or change legacy service.
+
+## VPS pinned candidate import verification PASS (2026-11-07)
+- Operator ran Python imports from `/opt/hermes-fenced-377abe8b948b`: fenced broker, owned recovery and systemd supervisor all resolved under that exact staged directory. `git rev-parse HEAD` matched pinned `377abe8b948b1857a5f1d5c3cfad7379d3a1a713`.
+- This confirms staged module resolution, not service-manager sandbox, signing or recovery ordering. Production cutover remains NO.
