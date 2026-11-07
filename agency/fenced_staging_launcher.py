@@ -33,7 +33,8 @@ def _peer_child(peer, control, broker, root_control, database, key, uid, gid):
 
 
 def run_staging_session(grant, key, journal, database, *, trusted_uid,
-                        trusted_gid, runner=None, ledger=None):
+                        trusted_gid, runner=None, ledger=None,
+                        production_candidate=False):
     """Start a non-root trusted peer and concurrent root stop controller.
 
     Root controller runs in a thread because it must serve stop requests
@@ -43,8 +44,14 @@ def run_staging_session(grant, key, journal, database, *, trusted_uid,
     """
     if os.geteuid() != 0:
         raise PermissionError("Root staging operator required")
-    _staging_path(journal)
-    _staging_path(database)
+    if production_candidate:
+        if (journal != "/var/lib/hermes-broker/owned-units.sqlite"
+                or database != "/var/lib/hermes-agency/agency.db"
+                or ledger != "/var/lib/hermes-broker/ledger.sqlite"):
+            raise PermissionError("Candidate paths must match provisioned production paths")
+    else:
+        _staging_path(journal)
+        _staging_path(database)
     if (type(trusted_uid) is not int or trusted_uid <= 0
             or type(trusted_gid) is not int or trusted_gid <= 0):
         raise PermissionError("Dedicated non-root staging identity required")
