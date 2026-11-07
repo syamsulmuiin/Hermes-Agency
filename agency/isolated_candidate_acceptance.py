@@ -198,6 +198,11 @@ def run():
                 os._exit(0)
             unit = unit_for_grant(c2["id"])
             if not until(lambda: active(unit), 15):
+                print("CANDIDATE_HOLD_UNIT=" + unit, flush=True)
+                print("CANDIDATE_HOLD_UNIT_STATUS=" + ctl("status", unit, "--no-pager", "-l").stdout.decode("utf-8", "replace")[-3500:], flush=True)
+                print("CANDIDATE_HOLD_BROKER_STATUS=" + ctl("status", broker_unit, "--no-pager", "-l").stdout.decode("utf-8", "replace")[-4500:], flush=True)
+                print("CANDIDATE_HOLD_JOURNAL=" + repr(sqlite3.connect(journal).execute("SELECT unit,state FROM owned_units").fetchall()), flush=True)
+                print("CANDIDATE_HOLD_LEDGER=" + repr(sqlite3.connect(ledger).execute("SELECT grant_id,status FROM signed_grant_consumptions").fetchall()), flush=True)
                 raise AssertionError("Hold unit never became active")
             contender = sqlite3.connect(dbpath, timeout=.2, isolation_level=None)
             try:
