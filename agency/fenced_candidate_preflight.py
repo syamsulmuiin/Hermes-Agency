@@ -25,6 +25,7 @@ def check():
     start = broker["Service"]["ExecStart"]
     pre = broker["Service"]["ExecStartPre"]
     rec = recovery["Service"]["ExecStart"]
+    post = broker["Service"].get("ExecStopPost", "")
     expected_journal = "/var/lib/hermes-broker/owned-units.sqlite"
     if ("agency.fenced_broker_candidate" not in start
             or "--execute" not in start
@@ -33,6 +34,10 @@ def check():
             or "agency.fenced_startup_gate" not in pre
             or "--journal " + expected_journal not in pre):
         raise PermissionError("Candidate broker missing fenced execution or gate")
+    if ("agency.fenced_owned_recovery" not in post
+            or "--journal " + expected_journal not in post
+            or "--execute" not in post):
+        raise PermissionError("Candidate missing PID1 post-stop recovery")
     if ("agency.fenced_owned_recovery" not in rec
             or "--journal " + expected_journal not in rec
             or "--execute" not in rec):
