@@ -42,9 +42,10 @@ def sidecar(conn, control, database, key, uid, broker_end, supervisor_end):
         control.close()
 
 
-def supervisor(control, broker_end, sidecar_end, stop_received):
+def supervisor(control, broker_end, sidecar_end, peer_end, stop_received):
     broker_end.close()
     sidecar_end.close()
+    peer_end.close()
     try:
         if control.recv(16) != b"stop\n":
             raise PermissionError("Unexpected supervisor request")
@@ -132,7 +133,7 @@ def run():
         parent, peer = socket.socketpair()
         root_control, trusted_control = socket.socketpair()
         trusted = mp.Process(target=sidecar, args=(peer, trusted_control, database, key, uid, parent, root_control))
-        root = mp.Process(target=supervisor, args=(root_control, parent, trusted_control, stop_received))
+        root = mp.Process(target=supervisor, args=(root_control, parent, trusted_control, peer, stop_received))
         started = None
         try:
             for path, body in (
