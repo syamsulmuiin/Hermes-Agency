@@ -1192,3 +1192,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Code inspection found `/run/hermes-staging` parent created 0700 root, preventing nonroot trusted peer from traversing to its writable SQLite fixture despite the nested directory being correctly owned.
 - Patch `34811fe`: fixture requires root ownership and no group/other write on staging parent, then sets 0711 (traverse-only, no listing) for the isolated test. Not VPS-validated. Follow up with peer-side error diagnostics if failure persists.
 - Broker SIGKILL/watchdog recovery still unimplemented in this acceptance; production untouched.
+
+## Real launcher systemd stop verification failure (2026-11-07)
+- VPS at `edc730c`: static PASS, launcher FAIL in `supervised_fenced_unit -> stop_and_verify_unit`, production active. Signed grant and trusted lease handshake advanced through executor, but successful systemd execution is not yet proven.
+- Root cause candidate: `systemd-run --wait --collect` may unload completed `noop` unit before a subsequent `systemctl stop`, which can fail despite an already-inactive unit.
+- Patch `5767694`: check exact systemd ActiveState/Job/MainPID before stop; allow already inactive/failed with no job or PID; after stop failure still require independent state verification, otherwise fail closed. Test `cc002b8` covers collected, active, failed-stop and unavailable-status cases.
+- Pending VPS test; no independent broker SIGKILL watchdog recovery verified. Production remains untouched.
