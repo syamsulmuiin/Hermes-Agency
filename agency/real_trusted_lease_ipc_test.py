@@ -23,7 +23,11 @@ from .fenced_systemd_supervisor import stop_and_verify_unit
 from .security import fingerprint
 
 
-def sidecar(conn, control, database, key, uid):
+def sidecar(conn, control, database, key, uid, inherited_broker, inherited_supervisor):
+    # fork inherits both ends of each socketpair. Close the broker and
+    # supervisor endpoints in the child so broker close produces actual EOF.
+    inherited_broker.close()
+    inherited_supervisor.close()
     # Import before dropping privileges: /root is not traversable by nobody.
     # The child retains only preloaded Python code, not root filesystem access.
     from .trusted_lease_ipc import serve_fence_connection
@@ -100,7 +104,7 @@ def exercise():
         os.chmod(database,0o600)
         parent, peer = socket.socketpair()
         root_control, trusted_control = socket.socketpair()
-        child = mp.Process(target=sidecar,args=(peer,trusted_control,database,key,uid))
+        child = mp.Process(target=sidecar,args=(peer,trusted_control,database,key,uid,parent,root_control))
         try:
             launch(unit)
             await_active(unit)
