@@ -122,13 +122,15 @@ def operator_admission_lease(path="/run/hermes-admission/admission.lock"):
         os.close(fd)
 
 
-def dispatch_operator(boundary, request, verifier, broker_key_path, broker_socket_path):
+def dispatch_operator(boundary, request, verifier, broker_key_path, broker_socket_path,
+                      *, admission_lock=None, freeze_marker=None):
     """Authenticate and decide; broker execution is only after actual approval."""
-    with operator_admission_lease():
+    with operator_admission_lease() if admission_lock is None else operator_admission_lease(admission_lock):
         operator_identity, salt, proof = verifier
         # Cooperative maintenance marker; not a security boundary or drain lock.
         # A race remains between this check and broker execution.
-        freeze = "/run/hermes-operator/admission.freeze"
+        freeze = ("/run/hermes-operator/admission.freeze" if freeze_marker is None
+                  else freeze_marker)
         if os.path.lexists(freeze):
             raise PermissionError("Operator admission frozen for maintenance")
         boundary.approve_operator_request(
@@ -145,7 +147,8 @@ def dispatch_operator(boundary, request, verifier, broker_key_path, broker_socke
     
 
 def handle_operator_connection(connection, boundary, verifier,
-                               broker_key_path, broker_socket_path):
+                               broker_key_path, broker_socket_path,
+                               *, admission_lock=None, freeze_marker=None):
     """Root SO_PEERCRED gate comes BEFORE reading any client-controlled bytes."""
     status = "denied"
     try:
@@ -164,7 +167,8 @@ def handle_operator_connection(connection, boundary, verifier,
         if not raw.endswith(b"\n"):
             raise PermissionError("Missing request terminator")
         request = parse_operator_request(bytes(raw[:-1]))
-        dispatch_operator(boundary, request, verifier, broker_key_path, broker_socket_path)
+        dispatch_operator(boundary, request, verifier, broker_key_path, broker_socket_path,
+                          admission_lock=admission_lock, freeze_marker=freeze_marker)
         status = "accepted"
     except (PermissionError, ValueError, TimeoutError, OSError, TypeError, KeyError):
         pass
@@ -176,7 +180,8 @@ def handle_operator_connection(connection, boundary, verifier,
 
 
 def serve_operator_forever(path, boundary_factory, verifier, broker_key_path,
-                           broker_socket_path, stop):
+                           broker_socket_path, stop, *, admission_lock=None,
+                           freeze_marker=None):
     """Bind an owner-only socket in a separate pre-provisioned 0700 directory.
 
     Never touch the worker socket. The factory returns (boundary, close).
@@ -210,6 +215,7 @@ def serve_operator_forever(path, boundary_factory, verifier, broker_key_path,
                     handle_operator_connection(
                         connection, boundary, verifier, broker_key_path,
                         broker_socket_path,
+                        admission_lock=admission_lock, freeze_marker=freeze_marker,
                     )
                 finally:
                     close()
