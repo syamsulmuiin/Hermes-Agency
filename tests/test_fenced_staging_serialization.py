@@ -8,6 +8,7 @@ from unittest.mock import patch
 from agency.fenced_staging_serialization import staging_launch, staging_recover
 
 
+@unittest.skipUnless(os.geteuid() == 0, "Root-only journal integration tests")
 class StagingSerializationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -33,7 +34,7 @@ class StagingSerializationTests(unittest.TestCase):
                     staging_launch(self.journal, "hermes-fenced-" + "b" * 32 + ".service", launch)
                 self.assertEqual(staging_recover(self.journal, stop_unit=lambda u: True), (unit,))
                 self.assertEqual(staging_launch(
-                    self.journal, "hermes-fenced-" + "c" * 32 + ".service", launch), "launched")
+                    self.journal, "hermes-fenced-" + "c" * 32 + ".service", lambda: "launched"), "launched")
 
     def test_reject_non_root(self):
         with patch("agency.fenced_staging_serialization.os.geteuid", return_value=1000):
