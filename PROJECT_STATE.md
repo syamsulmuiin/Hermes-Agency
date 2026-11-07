@@ -1557,3 +1557,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Also PASS: real operator approval, broker socket and effective sandbox, wrong-secret rejection, operator-to-broker IPC, replay rejection, signed-grant admission.
 - Production health checked after acceptance: `hermes-agency.service`, `hermes-signed-broker.service`, `hermes-operator-sidecar.service` all **active**. No production units, credentials, databases or sockets modified by this staging rehearsal.
 - Remaining: inspect production service wiring, actual deployed code and sidecar sandbox, restart/rollback runbook, and deployment gates before proposing any cutover. **Cutover not authorized**.
+
+## Pinned production-integration staging validation (2026-11-07)
+- User-reported VPS validation of pinned candidate `/opt/hermes-fenced-912dce6aef6b` after preparation commits: **316 unit tests OK (1 skipped)**, `FENCED_MANIFEST_STATIC_GATE=PASS`, systemd manifest verification returned success, and isolated candidate `ACCEPTANCE_EXIT_CODE=0`.
+- All sidecar operator IPC, replay denial, signed grant, active held job, trusted lease lock, SIGKILL pending gate, independent recovery, restart, and disposable rollback markers **PASS**.
+- Three production services `hermes-agency.service`, `hermes-signed-broker.service`, and `hermes-operator-sidecar.service` remained **active**.
+- The static manifest audit prints `EFFECTIVE_SYSTEMD_RUNTIME_TESTED=NO` and `TRUSTED_OPERATOR_E2E_TESTED=NO` because those markers refer to static manifest audit only; the separate isolated acceptance test verifies the staging runtime and operator E2E. Production effective runtime integration is **not** verified.
+- Production integration plan: `docs/FENCED_PRODUCTION_INTEGRATION_PREPARATION.md`. **NO-GO for production cutover** pending read-only compatibility checks of existing ledger/journal/database, exclusive broker transition, backup/rollback rehearsal and explicit authorization.
