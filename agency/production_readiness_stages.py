@@ -113,6 +113,18 @@ def audit():
             blockers.append("Runtime evidence unexpectedly claims cutover authorization")
     except (OSError, ValueError, PermissionError, KeyError, subprocess.SubprocessError) as exc:
         blockers.append("Sidecar runtime identity not independently attested: " + type(exc).__name__)
+    # Installed recovery wiring is observable; actual PID1 recovery behavior
+    # remains a separate cutover blocker until independently attested.
+    try:
+        from .production_recovery_wiring_evidence import inspect
+        recovery = inspect()
+        if recovery["installed_recovery_wiring"] == "PASS" and recovery["cutover_authorized"] is False:
+            evidence.append("INSTALLED_PID1_RECOVERY_WIRING=PASS")
+            evidence.append("PID1_RECOVERY_BEHAVIOR=" + recovery["pid1_behavior"])
+        else:
+            blockers.append("Installed PID1 recovery wiring evidence invalid")
+    except (OSError, ValueError, PermissionError, KeyError, subprocess.SubprocessError) as exc:
+        blockers.append("Installed PID1 recovery wiring not verified: " + type(exc).__name__)
     # Distinguish locally observed state from external acceptance evidence.
     # Prior manual tests are not durable attestations; never auto-promote them.
     evidence.append("CANDIDATE_ROUTE_UNIT_TESTS=EXTERNAL_RESULT_NOT_ATTESTED")
