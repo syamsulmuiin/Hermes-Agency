@@ -642,3 +642,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - User executed root-only provisioning after identity and existing-path checks. `/etc/hermes-broker` `0710 root:hermes-trusted`, `/etc/hermes-broker/signing.key` `0640 root:hermes-trusted` (64 raw bytes), `/var/lib/hermes-broker` `0700 root:root`, `/var/lib/hermes-broker/ledger.sqlite` `0600 root:root`.
 - Output `BROKER_PROVISIONING=PASS`, `BROKER_KEY_SIZE=PASS`; main `hermes-agency.service` remains `active`.
 - Broker and operator units not yet installed or started. Never re-run exclusive provisioning blindly, rotate keys, or expose credentials. Next gate: interactive operator verifier provisioning under trusted private UID/GID, then opt-in tmpfiles and systemd unit installation and validation.
+
+
+## Production operator verifier provisioning (2026-11-07)
+- User executed `runuser -u hermes-trusted -g hermes-trusted -- /usr/bin/python3 -m agency.operator_provision --path /var/lib/hermes-agency/keys/operator-verifier.json --identity operator` from `/opt/hermes-agency`; interactive command returned `operator_verifier_provisioned=PASS`.
+- Operator secret was not disclosed. File mode/ownership and main service status still require separate read-only verification before optional unit installation. Do not repeat exclusive provisioning or reveal secret.
