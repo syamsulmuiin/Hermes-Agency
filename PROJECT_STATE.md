@@ -899,3 +899,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation to 9deb8b8 and ran twelve unittest modules including durable_recovery_gate and all prior suites.
 - Result: 53 tests in 1.142s, OK, TEST_EXIT_CODE=0. All three new mocked startup-gate tests passed. Expected argparse error output is from the missing --broker-stopped negative test.
 - No systemd drop-in installed, no real transient unit or forced broker crash, and no proven race-free startup gate. Production unchanged. Next: isolated crash-injection harness and durable ownership/service lifetime coordination before any production acceptance.
+
+
+## Isolated SIGKILL exercise prepared (2026-11-07)
+- Commit 7306bb9: agency/isolated_fenced_crash_test.py runs a separate broker-like process, durably registers a test-only unit, SIGKILLs the process, verifies startup is denied while journal pending, then uses a FAKE in-memory systemd backend to simulate independent cleanup and verify startup is allowed only after journal marked verified.
+- This test is not yet executed on VPS. It does NOT create or stop a real transient systemd unit, exercise a live trusted lease IPC disconnect, or prove automatic systemd startup ordering. Production untouched. Real systemd and fence-loss acceptance remain blockers.
