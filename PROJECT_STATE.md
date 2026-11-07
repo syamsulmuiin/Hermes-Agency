@@ -470,3 +470,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## VPS supervised startup failure and correction (2026-11-07)
 - VPS reported `ModuleNotFoundError: No module named 'agency'` in transient systemd unit; production hermes-agency.service remained active. This is an import-path startup failure, not a broker authorization result.
 - Fixed isolated test script to pass explicit systemd working directory and PYTHONPATH to broker and both non-root trusted client invocations. Re-run pending; no claim of successful supervised E2E until VPS confirms.
+
+## Verified VPS supervised acceptance (2026-11-07)
+- Operator VPS reported `bash deploy/test_supervised_integration.sh` EXIT_CODE=0: two `supervised_trusted_adapter_to_systemd=PASS`, `supervised_systemd=PASS worker_denied=PASS key_rotated_new_grants=PASS ledger=PASS`.
+- Existing `hermes-agency.service` remained active. This proves transient systemd supervised broker and isolated trusted UID client E2E, not live production trusted-service integration.
+- Remaining gates: explicitly reject pre-rotation unused signed grant after key rotation, verify production unit hardening, and connect real running trusted service via authenticated operator-only path; no production activation yet.
