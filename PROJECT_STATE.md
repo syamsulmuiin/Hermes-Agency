@@ -1402,3 +1402,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator verified `/opt/hermes-agency` contains an older deployed tree missing all seven critical fenced modules; `CANDIDATE_DEPLOYMENT_MISSING=...`, parity exit 1. Both production services active.
 - Added `agency.fenced_prepare_deployment` (`1c2f5ba`) for clean-branch, pinned Git revision, separate `/opt/hermes-fenced-<revision>` preparation; dry-run default, explicit `--execute` only, no changes to existing live tree or units. Updated cutover runbook (`a03266f`).
 - Next: operator dry-run and staged preparation, then GitHub-tracked staging systemd manifest and actual sandbox test. Production cutover still blocked; do not repoint live service.
+
+## Operator verified pinned side-by-side candidate deployment (2026-11-07)
+- VPS dry-run and explicit preparation both selected source revision `377abe8b948b1857a5f1d5c3cfad7379d3a1a713`, target `/opt/hermes-fenced-377abe8b948b`; `CANDIDATE_DEPLOYMENT_PREPARED=PASS`, exit 0. Production cutover NO, both production services active.
+- The staged tree is a frozen snapshot; later development commits do not automatically update it. Before a staged service test, verify import resolution and the exact candidate revision; test-only unit must use isolated socket/journal/ledger and must not bind existing production paths.
+- Pending: real systemd sandbox/permission test and signed-grant/recovery integration against the pinned staged tree. Do not activate production candidate or change legacy service.
