@@ -47,7 +47,16 @@ def main(argv=None):
     parser.add_argument("--client-gid", type=int, required=True)
     parser.add_argument("--allow-uid", type=int, action="append", required=True)
     parser.add_argument("--secret-file", required=True)
+    # Explicit opt-in: no operator endpoint in existing deployments.
+    parser.add_argument("--operator-socket")
+    parser.add_argument("--operator-verifier")
+    parser.add_argument("--broker-key")
+    parser.add_argument("--broker-socket")
     args = parser.parse_args(argv)
+    operator_fields = (args.operator_socket, args.operator_verifier,
+                       args.broker_key, args.broker_socket)
+    if any(operator_fields) and (not all(operator_fields) or not args.forever):
+        parser.error("Operator channel requires --forever and all four opt-in paths")
     if os.geteuid() == 0:
         parser.error("Trusted service must not run as root")
     # Read a pre-provisioned 0600 regular file only, never environment secrets.
@@ -65,9 +74,18 @@ def main(argv=None):
         os.close(fd)
     if args.forever:
         from .service_lifecycle import serve_forever
+        operator_config = None
+        if all(operator_fields):
+            operator_config = {
+                "socket_path": args.operator_socket,
+                "verifier_path": args.operator_verifier,
+                "broker_key_path": args.broker_key,
+                "broker_socket_path": args.broker_socket,
+            }
         return serve_forever(args.socket, args.state_dir, args.database,
                              args.key_dir, args.client_gid,
-                             frozenset(args.allow_uid), secret)
+                             frozenset(args.allow_uid), secret,
+                             operator_config=operator_config)
     return run_service(args.socket, args.state_dir, args.database, args.key_dir,
                        args.client_gid, frozenset(args.allow_uid), secret)
 
