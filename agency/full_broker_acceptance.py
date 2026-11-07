@@ -68,10 +68,9 @@ def run_acceptance(trusted_user="hermes-trusted", worker_user="hermes-worker"):
             try:
                 with socket.socket(socket.AF_UNIX) as sock:
                     sock.connect(socket_path)
-            except (PermissionError, FileNotFoundError, ConnectionRefusedError):
+            except PermissionError:
                 return
             raise AssertionError("Worker connected to restricted broker socket")
-        _wait(_child(worker.pw_uid, worker.pw_gid, worker_denial))
 
         def trusted_client():
             store = SecureAgencyStore(trusted_db)
@@ -94,12 +93,8 @@ def run_acceptance(trusted_user="hermes-trusted", worker_user="hermes-worker"):
                 result = submit_signed_grant(socket_path, envelope)
                 if result.get("isolated_backend") != "systemd" or result.get("exit_code") != 0:
                     raise AssertionError("Real systemd sandbox not confirmed")
-                try:
-                    submit_signed_grant(socket_path, envelope)
-                except (OSError, PermissionError):
-                    pass
-                else:
-                    raise AssertionError("Replay unexpectedly accepted")
+                # The one-shot listener closes after the first execution.
+                # Replay is verified separately against persistent ledger.
                 Path(result_path).write_text(json.dumps(result))
             finally:
                 store.close()
@@ -107,7 +102,9 @@ def run_acceptance(trusted_user="hermes-trusted", worker_user="hermes-worker"):
         child = _child(trusted.pw_uid, trusted.pw_gid, trusted_client)
         try:
             serve_signed_once(socket_path, trusted.pw_uid, trusted.pw_gid,
-                              ledger_path, trusted_db, key_path)
+                              ledger_path, trusted_db, key_path,
+                              on_ready=lambda: _wait(_child(
+                                  worker.pw_uid, worker.pw_gid, worker_denial)))
         finally:
             _wait(child)
         with sqlite3.connect(ledger_path) as db:
