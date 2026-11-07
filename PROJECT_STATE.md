@@ -1186,3 +1186,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS at `c39eff6`: `LAUNCHER_EXIT=1`, `PRODUCTION_SERVICE_EXIT=0`; `NameError: database is not defined` before broker invocation.
 - Cause: prior GitHub patch embedded literal `\\n` characters within a Python comment, swallowing the trusted directory and database assignments.
 - Commit `6859f99` restores actual Python lines and conditional active-unit cleanup. NOT YET VPS-VALIDATED. Production untouched.
+
+## IPC handshake failure investigation (2026-11-07)
+- VPS at `c09df1d`: new launcher acceptance still fails `Invalid lease IPC framing` while waiting for `locked`, production active. No evidence of successful staging job yet.
+- Code inspection found `/run/hermes-staging` parent created 0700 root, preventing nonroot trusted peer from traversing to its writable SQLite fixture despite the nested directory being correctly owned.
+- Patch `34811fe`: fixture requires root ownership and no group/other write on staging parent, then sets 0711 (traverse-only, no listing) for the isolated test. Not VPS-validated. Follow up with peer-side error diagnostics if failure persists.
+- Broker SIGKILL/watchdog recovery still unimplemented in this acceptance; production untouched.
