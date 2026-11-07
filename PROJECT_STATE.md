@@ -1338,3 +1338,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Third isolated candidate execution (2026-11-07)
 - Observed socket PASS, valid signed grant PASS, replay denied PASS, then hold unit never became active (exit 1); both production services remained active.
 - Added read-only failure diagnostics for transient unit, broker systemd status, isolated journal and ledger (`529da4b`). No hold/SIGKILL/recovery acceptance has passed yet; root cause awaits runtime diagnostic output.
+
+## Replay crash root cause and correction (2026-11-07)
+- VPS runtime confirmed socket, first signed grant, replay denial PASS, but replay caused an unhandled SQLite `UNIQUE constraint failed: owned_units.unit` while registering the already-verified unit, crashing the candidate service before the next hold grant. Production services remained active.
+- Fixed ordering: `staging_launch(..., admit=...)` invokes the atomic replay ledger admission inside the existing exclusive journal lock **before** `register_before_launch`. `staging_broker_job` now supplies the ledger admission callback; replay denial raises `PermissionError` handled by persistent broker loop and leaves journal unchanged. Added `tests/test_fenced_replay_admission_order.py` regression coverage. No production cutover authorized. Rerun E2E; hold/lease/SIGKILL/recovery remain unverified.
