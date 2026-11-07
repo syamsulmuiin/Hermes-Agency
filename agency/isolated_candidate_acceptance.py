@@ -214,6 +214,13 @@ def run(*, deployed=None):
                                              + " " + repr(values))
                 print("CANDIDATE_EFFECTIVE_SYSTEMD_SANDBOX=PASS", flush=True)
 
+            # Actual sidecar IPC path: root operator -> trusted nonroot
+            # sidecar -> fenced broker. All fixtures remain disposable.
+            if deployed is not None:
+                from .isolated_sidecar_rehearsal import run_sidecar_rehearsal
+                run_sidecar_rehearsal(folder, dbpath, keypath, sock,
+                                     identity, repo)
+
             # SO_PEERCRED requires the dedicated nonroot UID. Fork and drop
             # privileges in a child; never weaken candidate peer checking.
             def request(grant):
