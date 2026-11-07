@@ -190,6 +190,70 @@ def execute_signed_grant(db_path, envelope, verification_key,
             db.close()
 
 
+
+def execute_fenced_signed_grant(db_path, envelope, verification_key,
+                                fence_socket_path, executor=run_systemd_job,
+                                now=None):
+    """Opt-in broker ledger + trusted sidecar fence, never writes trusted DB.
+
+    This function is not connected to the production socket listener.
+    The trusted endpoint must verify root peer, signed grant and live lease.
+    A consumed grant is never retried even if the fence connection fails.
+    """
+    from .broker_grants import verify_broker_grant
+    from .trusted_lease_ipc import _read_line, _send
+
+    claims = verify_broker_grant(envelope, verification_key, now=now)
+    verify_private_ledger(db_path)
+    if (not isinstance(fence_socket_path, str)
+            or not os.path.isabs(fence_socket_path)):
+        raise PermissionError("Absolute trusted fence socket required")
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as fence:
+        fence.settimeout(5)
+        fence.connect(fence_socket_path)
+        _send(fence, {"grant": envelope})
+        response = json.loads(_read_line(fence))
+        if response != {"status": "locked", "grant_id": claims["id"]}:
+            raise PermissionError("Trusted lease fence denied")
+        # Trusted sidecar holds BEGIN IMMEDIATE until this socket closes.
+        # The unique insert and commit are the atomic replay decision.
+        db = sqlite3.connect(db_path, timeout=5, isolation_level=None)
+        try:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("""CREATE TABLE IF NOT EXISTS signed_grant_consumptions(
+                grant_id TEXT PRIMARY KEY, task_id TEXT NOT NULL,
+                worker TEXT NOT NULL, lease_generation INTEGER NOT NULL,
+                job TEXT NOT NULL, approval_id TEXT NOT NULL, status TEXT NOT NULL)""")
+            try:
+                db.execute("INSERT INTO signed_grant_consumptions VALUES (?,?,?,?,?,?,?)",
+                           (claims["id"], claims["task"], claims["worker"],
+                            claims["lease_generation"], claims["job"],
+                            claims["approval"], "started"))
+            except sqlite3.IntegrityError as exc:
+                db.rollback()
+                raise PermissionError("Grant replay denied") from exc
+            db.commit()
+            try:
+                # Do not impose the handshake timeout on the fixed job.
+                fence.settimeout(None)
+                result = executor(claims["job"])
+                # An uncertain fence completion is a failed attempt, never
+                # a successful broker response or an opportunity to replay.
+                _send(fence, {"status": "done", "grant_id": claims["id"]})
+                response = json.loads(_read_line(fence))
+                if response != {"status": "released", "grant_id": claims["id"]}:
+                    raise PermissionError("Trusted fence release unconfirmed")
+            except BaseException:
+                db.execute("UPDATE signed_grant_consumptions SET status='failed' WHERE grant_id=?",
+                           (claims["id"],))
+                raise
+            db.execute("UPDATE signed_grant_consumptions SET status='completed' WHERE grant_id=?",
+                       (claims["id"],))
+            return result
+        finally:
+            db.close()
+
+
 def handle_signed_connection(conn, trusted_uid, ledger_path, trusted_db_path,
                              verification_key, executor=run_systemd_job, now=None):
     """Separate opt-in signed-grant socket protocol; no legacy fallback."""
