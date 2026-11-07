@@ -91,6 +91,19 @@ def audit():
                 blockers.append("Installed recovery unit lacks owned recovery entrypoint")
         except (OSError, PermissionError, subprocess.TimeoutExpired) as exc:
             blockers.append(unit + ": installed systemd wiring not verifiable (" + type(exc).__name__ + ")")
+    # Runtime identity is observed independently; this is not behavioral
+    # admission attestation and cannot authorize a production cutover.
+    try:
+        from .production_runtime_evidence import capture
+        runtime = capture()
+        evidence.append("SIDECAR_RUNTIME_IDENTITY=" + runtime["runtime_identity"])
+        evidence.append("SIDECAR_RUNTIME_PID=" + str(runtime["sidecar_pid"]))
+        evidence.append("SIDECAR_RUNTIME_SNAPSHOT=" + runtime["snapshot"])
+        evidence.append("SIDECAR_ADMISSION_BEHAVIOR=" + runtime["admission_behavior"])
+        if runtime["cutover_authorized"] is not False:
+            blockers.append("Runtime evidence unexpectedly claims cutover authorization")
+    except (OSError, ValueError, PermissionError, KeyError, subprocess.SubprocessError) as exc:
+        blockers.append("Sidecar runtime identity not independently attested: " + type(exc).__name__)
     # Distinguish locally observed state from external acceptance evidence.
     # Prior manual tests are not durable attestations; never auto-promote them.
     evidence.append("CANDIDATE_ROUTE_UNIT_TESTS=EXTERNAL_RESULT_NOT_ATTESTED")
