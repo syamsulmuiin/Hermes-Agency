@@ -33,7 +33,7 @@ def exercise():
         # Test-only pending journal entry; no actual unit launched.
         gate = folder + "/gate"
         with open(gate, "w", encoding="ascii") as file:
-            file.write("#!/bin/sh\nexec " + sys.executable +
+            file.write("#!/bin/sh\ncd " + os.path.dirname(os.path.dirname(__file__)) + "\nexec " + sys.executable +
                        " -m agency.fenced_startup_gate --journal " + journal + "\n")
         os.chmod(gate, 0o700)
         # systemd-run --property=ExecStartPre is not universally supported:
