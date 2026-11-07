@@ -1360,3 +1360,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Isolated crash-window regression expansion (2026-11-07)
 - Added `tests/test_fenced_launch_crash_windows.py` (`d1e72d6`) to cover admission denial before journal registration, interruption after admission, failure after journal registration, startup gate denial, failed recovery preserving pending, and successful stop/verification transition. These are mock-stop / SQLite fault-window tests, **not** real systemd or power-loss tests; await VPS unittest output before marking PASS.
 - Source review confirmed the real default fixed-job runner is `fenced_systemd_supervisor.run_fenced_systemd_unit`, which invokes `/usr/bin/systemd-run --wait --collect` with allowlisted jobs and fence monitoring. The isolated E2E `identity` runner instead invokes a dedicated sleep transient unit. Next separate staging test must exercise the real runner under systemd with no production paths or service changes.
+
+## Operator verification: crash-window regression PASS (2026-11-07)
+- VPS at `80ca721`: focused `tests.test_fenced_launch_crash_windows` and `tests.test_fenced_replay_admission_order`: 5 tests OK, exit 0. Full suite: 304 tests OK (1 skipped), exit 0. Both `hermes-agency.service` and `hermes-signed-broker.service` remained active.
+- CLI `usage:` lines are expected negative-argument test output; `FENCED_CANDIDATE_RUNTIME_CRASH_VERIFIED=NO` remains a distinct test marker, not a production crash verification.
+- Isolated mock crash windows validated; **real-runner systemd fault injection remains pending**. Production integration and cutover remain unauthorized.
