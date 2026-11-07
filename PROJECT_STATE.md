@@ -604,3 +604,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added `docs/PRODUCTION_PROVISIONING_RUNBOOK.md`: prerequisites, minimal 11-file runtime overlay, one-time root broker key and private ledger provisioning, interactive trusted-UID scrypt operator verifier, tmpfiles and unit installation order, controlled validation and rollback that preserves the live service and databases.
 - **These are preparation artifacts only.** No production filesystem or service modifications, secret provisioning or activation performed. Templates still require VPS `systemd-analyze verify`, private group and path review, and final approval. Do not claim deployment readiness until checks pass.
 - Next: VPS operator performs **read-only** static validation of both templates and tmpfiles, including systemd syntax, without copying them to `/etc` or starting units. Address any findings in development branch, then request separate explicit approval for actual provisioning/activation.
+
+
+## VPS static deployment template verification (2026-11-07)
+- User ran `systemd-analyze verify` on temporary `.service` copies of both broker and operator sidecar units: `SYSTEMD_VERIFY_EXIT_CODE=0`.
+- Broker static hardening audit: `production_unit_static_hardening=PASS`, `BROKER_AUDIT_EXIT_CODE=0`.
+- `systemd-tmpfiles --cat-config deploy/hermes-optional-runtime.tmpfiles.example` displayed global tmpfiles configuration (output truncated at lines 1–32), not conclusive evidence of Hermes-specific entries. `TMPFILES_READ_EXIT_CODE` and final production service status were not visible in the provided output; **do not infer their values**.
+- Next: validate the exact two Hermes tmpfiles entries without running `--create` or `--remove`, confirm exit code and service state. No production activation or provisioning authorized.
