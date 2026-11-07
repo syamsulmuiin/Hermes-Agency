@@ -28,3 +28,9 @@ Status: **BLOCKED pending live sandbox and caller-path validation**. This is an 
 
 ## Known blocker
 The candidate unit has `WorkingDirectory=/opt/hermes-agency` and `ProtectHome=yes`. The operator currently runs development tests in `/root/Hermes-Agency`. An existing `/opt/hermes-agency` path was reported, but its revision, dependencies and runtime accessibility were not checked. No cutover has been executed.
+
+## Repository-controlled deployment parity gate
+- Run `python3 -m agency.fenced_deployment_parity --source /root/Hermes-Agency --deployed /opt/hermes-agency` from the development checkout. A nonzero exit is a hard deployment blocker; the script does not copy or modify files.
+- Deploy from a pinned GitHub revision to `/opt/hermes-agency` only after inspecting the existing deployment layout and preserving its service configuration. Never repair production by copying a single module from `/root` or replacing the entire `/opt` directory blindly.
+- `systemd-analyze security` must be run against a real loadable unit name or correctly registered temporary unit; the previous relative-file invocation returned `Unit ... not found` and did not assess sandbox security. Static `systemd-analyze verify` exit 0 alone is insufficient.
+- Every deployment fix must first be committed to `development/foundation`, then installed from that exact revision, and tested before a production cutover.
