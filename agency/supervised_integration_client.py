@@ -18,7 +18,7 @@ from .trusted_broker_adapter import execute_approved_job, _trusted_key
 from .broker_grants import issue_broker_grant
 
 
-def run_trusted_client(database, credential_key, broker_key, socket_path, prepare_path=None):
+def run_trusted_client(database, credential_key, broker_key, socket_path, prepare_path=None, prepare_operator_path=None):
     if os.geteuid() == 0:
         raise PermissionError("Trusted client must be non-root")
     key = Path(credential_key).read_bytes()
@@ -32,6 +32,25 @@ def run_trusted_client(database, credential_key, broker_key, socket_path, prepar
         worker = service.issue_credential("worker", "worker")
         approval = store.request_approval(task, "execute_shell",
                                           {"job": "noop"}, "developer")
+        if prepare_operator_path is not None:
+            if (prepare_path is not None or not os.path.isabs(prepare_operator_path)
+                    or os.path.lexists(prepare_operator_path)):
+                raise PermissionError("Unsafe isolated operator fixture path")
+            fixture = {
+                "action": "approve_and_execute", "approval_id": approval,
+                "task_id": task, "job": "noop", "worker_credential": worker,
+                "lease_token": lease,
+            }
+            fd = os.open(prepare_operator_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+            try:
+                os.fchmod(fd, 0o600)
+                with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                    fd = -1
+                    json.dump(fixture, stream)
+            finally:
+                if fd >= 0:
+                    os.close(fd)
+            return {"operator_request_prepared": True}
         approver = service.issue_credential("operator", "approver")
         service.decide(approval, approver, True)
         if prepare_path is not None:
@@ -56,9 +75,16 @@ def main():
     parser.add_argument("--broker-key", required=True)
     parser.add_argument("--socket", required=True)
     parser.add_argument("--prepare-path", help="Isolated acceptance only: write unsubmitted signed grant")
+    parser.add_argument("--prepare-operator-path", help="Isolated acceptance only: write pending operator request without operator secret")
     args = parser.parse_args()
     result = run_trusted_client(args.database, args.credential_key,
-                                args.broker_key, args.socket, args.prepare_path)
+                                args.broker_key, args.socket, args.prepare_path,
+                                args.prepare_operator_path)
+    if args.prepare_operator_path is not None:
+        if result != {"operator_request_prepared": True}:
+            raise RuntimeError("Operator fixture preparation failed")
+        print(json.dumps({"pending_operator_request_prepared": "PASS"}))
+        return
     if args.prepare_path is not None:
         if result != {"prepared": True}:
             raise RuntimeError("Grant preparation failed")
