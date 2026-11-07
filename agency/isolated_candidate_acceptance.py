@@ -309,6 +309,9 @@ def run(*, deployed=None):
                         rows = connection.execute("SELECT unit FROM owned_units").fetchall()
                     if len(rows) != 1:
                         raise AssertionError("Unexpected sidecar-owned unit count")
+                    if not until(lambda: active(rows[0][0]), 15):
+                        raise AssertionError("Sidecar-originated hold unit not active")
+                    print("SIDECAR_HOLD_UNIT_ACTIVE=PASS", flush=True)
                     crash_and_recover(rows[0][0], sidecar_origin=True)
                 run_sidecar_rehearsal(folder, dbpath, keypath, sock,
                                      identity, repo, hold_callback=sidecar_crash)
@@ -331,7 +334,8 @@ def run(*, deployed=None):
                     print("CANDIDATE_HOLD_JOURNAL=" + repr(sqlite3.connect(journal).execute("SELECT unit,state FROM owned_units").fetchall()), flush=True)
                     print("CANDIDATE_HOLD_LEDGER=" + repr(sqlite3.connect(ledger).execute("SELECT grant_id,status FROM signed_grant_consumptions").fetchall()), flush=True)
                     raise AssertionError("Hold unit never became active")
-                    crash_and_recover(unit)\n            print("PERSISTENT_CANDIDATE_ISOLATED_E2E=PASS", flush=True)
+                crash_and_recover(unit)
+            print("PERSISTENT_CANDIDATE_ISOLATED_E2E=PASS", flush=True)
         finally:
             ctl("stop", broker_unit)
             if os.path.isfile(journal):
