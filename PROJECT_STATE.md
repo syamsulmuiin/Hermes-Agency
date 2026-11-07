@@ -503,3 +503,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Inspected live service implementation: `single_vps_service.py` / `service_lifecycle.py` expose only worker stage IPC, and `operator_auth.py` contains offline-provisioned scrypt verifier `LocalOperatorGate`.
 - Added `TrustedAgentExecution.approve_operator_request` to authenticate a local operator secret via `LocalOperatorGate` before calling the existing approval service. In-process method only; never added to worker IPC.
 - This does NOT yet establish an operator-only transport, rate limiting, credential provision on VPS, live service integration or production broker activation. No claims of completed live end-to-end authentication; runtime tests pending.
+
+## VPS operator boundary follow-up (2026-11-07)
+- VPS operator reported 196 unit tests OK (1 skipped) on prior branch head; `hermes-agency.service` remained `active`. These tests precede new regression tests below.
+- Added two regression tests in `tests/test_trusted_execution.py`: wrong operator secret cannot advance pending approval, and worker-role credential cannot substitute for operator secret. The correct secret exercises the existing LocalOperatorGate-to-TrustedApprovalService approve path.
+- No live operator-only IPC socket or authenticated integration with the running service exists yet; only in-process trusted boundary is tested. These new tests require VPS/CI execution before pass can be claimed.
+- No changes to production service, deployed broker, or worker-facing protocol.
