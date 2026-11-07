@@ -1198,3 +1198,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Root cause candidate: `systemd-run --wait --collect` may unload completed `noop` unit before a subsequent `systemctl stop`, which can fail despite an already-inactive unit.
 - Patch `5767694`: check exact systemd ActiveState/Job/MainPID before stop; allow already inactive/failed with no job or PID; after stop failure still require independent state verification, otherwise fail closed. Test `cc002b8` covers collected, active, failed-stop and unavailable-status cases.
 - Pending VPS test; no independent broker SIGKILL watchdog recovery verified. Production remains untouched.
+
+## Supervisor regression mock mismatch (2026-11-07)
+- VPS at `ce3b330`: `STATIC_EXIT=0`, `UNIT_EXIT=1` (279 tests, 2 StopIteration errors, 1 skipped), `LAUNCHER_EXIT=125` (not executed), `PRODUCTION_SERVICE_EXIT=0` (active).
+- Two legacy tests in `tests/test_fenced_systemd_supervisor.py` assumed systemctl stop precedes status. New collected-unit-safe supervisor queries status first, so finite mock side effects were exhausted.
+- Patch `b8dad6c` updates the legacy mocks to match pre-stop verification and preserve rejection tests. NOT YET VPS-VALIDATED. No production changes; real launcher and independent SIGKILL recovery remain unverified.
