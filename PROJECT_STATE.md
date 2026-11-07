@@ -466,3 +466,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Test harness uses ProtectHome=no solely to load a temporary code copy from /tmp, NOT the production unit security configuration. Therefore passing it does NOT certify the production example unit's hardening or live running hermes-agency.service integration.
 - IMPORTANT outstanding: test rejection of an unconsumed OLD signed grant after rotation (not yet covered by this script); real production trusted service transport integration; deployment unit hardening compatibility; dedicated key lifecycle/quiescence and operational rollback. Do not enable autonomous agent execution.
 - VPS verification pending; execute `bash deploy/test_supervised_integration.sh` only after regression acceptance and review of root-only transient unit test.
+
+## VPS supervised startup failure and correction (2026-11-07)
+- VPS reported `ModuleNotFoundError: No module named 'agency'` in transient systemd unit; production hermes-agency.service remained active. This is an import-path startup failure, not a broker authorization result.
+- Fixed isolated test script to pass explicit systemd working directory and PYTHONPATH to broker and both non-root trusted client invocations. Re-run pending; no claim of successful supervised E2E until VPS confirms.
