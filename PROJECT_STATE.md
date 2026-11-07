@@ -1397,3 +1397,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator output: `/opt/hermes-agency/agency/fenced_broker_candidate.py` missing, while `/root/Hermes-Agency` has latest candidate code; `systemd-analyze security deploy/systemd/...` returned unit-not-found, so sandbox assessment did not run. `systemd-analyze verify` exit 0; production services active.
 - Added read-only `agency.fenced_deployment_parity` to fail closed when critical deployed modules are missing/stale or Python import resolves incorrectly (`dba733b`). Updated cutover runbook (`c91b5fb`).
 - Policy: changes must be committed to GitHub development branch before deployment; do not apply one-off VPS-only patches or overwrite `/opt` blindly. Pending operator deployment layout output and parity test. No production cutover.
+
+## VPS deployment parity failed as expected; GitHub-only versioned preparation (2026-11-07)
+- Operator verified `/opt/hermes-agency` contains an older deployed tree missing all seven critical fenced modules; `CANDIDATE_DEPLOYMENT_MISSING=...`, parity exit 1. Both production services active.
+- Added `agency.fenced_prepare_deployment` (`1c2f5ba`) for clean-branch, pinned Git revision, separate `/opt/hermes-fenced-<revision>` preparation; dry-run default, explicit `--execute` only, no changes to existing live tree or units. Updated cutover runbook (`a03266f`).
+- Next: operator dry-run and staged preparation, then GitHub-tracked staging systemd manifest and actual sandbox test. Production cutover still blocked; do not repoint live service.
