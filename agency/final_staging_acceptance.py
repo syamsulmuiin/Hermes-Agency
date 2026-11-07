@@ -9,6 +9,8 @@ import subprocess
 import sys
 
 SCENARIOS = (
+    ("candidate_preflight", (sys.executable, "-m", "agency.fenced_candidate_preflight"),
+     ("FENCED_CANDIDATE_STATIC_PREFLIGHT=PASS",)),
     ("unit", (sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"),
      ("OK",)),
     ("integrated_crash", (sys.executable, "-m", "agency.real_integrated_crash_suite_test", "--execute"),
