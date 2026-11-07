@@ -9,6 +9,21 @@ from agency import production_admission_drain as drain
 
 
 class AdmissionDrainTests(unittest.TestCase):
+    def test_replaced_inode_denied(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "admission.lock")
+            with operator_admission_lease(path):
+                pass
+            original = os.stat(path)
+            replacement = os.path.join(directory, "replacement")
+            with open(replacement, "wb"):
+                pass
+            with patch("agency.operator_control.os.stat", return_value=os.stat(replacement)):
+                with self.assertRaisesRegex(PermissionError, "inode changed"):
+                    with operator_admission_lease(path):
+                        pass
+            self.assertEqual(os.stat(path).st_ino, original.st_ino)
+
     def test_exclusive_drain_blocks_new_shared_admission(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "admission.lock")
