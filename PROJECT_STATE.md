@@ -670,3 +670,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Earlier runtime overlay verification passed (11 installed and imported), but broker startup entered restart loop (`No module named agency.supervised_broker`, `NRestarts=31`). User stopped broker; main service remains active, broker/operator inactive.
 - Read-only inventory now finds `trusted_execution.py` present but **all 10 optional runtime modules missing** from `/opt/hermes-agency/agency`; directory and `trusted_execution.py` mtimes around `2026-11-07 01:37:52 UTC`. Cause of removal not yet established. Do not claim environment/PYTHONPATH is cause; direct import returned NOT_FOUND.
 - Next: investigate deployment/cleanup processes and compare `trusted_execution.py` with repository and backup before controlled reinstallation. Do not restart main service, rerun credential provisioning, or activate optional units until root cause and runtime integrity are checked.
+
+
+## Runtime recovery verification (2026-11-07)
+- User verified `SOURCE_MODULES=PASS`, three backup SHA256 checks OK, and main/broker/operator states active/inactive/inactive.
+- After running the recovery procedure, a separate-shell production import check returned `MODULE_PERSISTENCE=PASS` for `agency.supervised_broker` and `agency.operator_service`; module inventory again shows optional broker/operator modules present. Main service remained active, optional services inactive.
+- Recovery script's own `RUNTIME_RECOVERY=PASS` output was not supplied, so do not assert that specific marker. Next step: one-shot controlled broker startup with `Restart=no` runtime override, verify socket/service and journal, then remove override. Do not enable at boot until end-to-end signed-grant and operator checks pass.
