@@ -141,19 +141,26 @@ def serve_once(path, trusted_uid, db_path):
 
 def execute_signed_grant(db_path, envelope, verification_key,
                          executor=run_systemd_job, now=None, trusted_db_path=None):
-    """Consume a verified trusted grant once before invoking fixed systemd job.
+    """Consume once and fence trusted lease writes through job completion.
 
-    This is a distinct protocol from legacy operator approvals. The key must
-    be provisioned out-of-band to trusted issuer and root broker only.
+    BEGIN IMMEDIATE on trusted SQLite prevents concurrent lease revocation
+    through SQLite while a fixed job runs, including when WAL is enabled.
     """
-    from .broker_grants import verify_broker_grant
+    from .broker_grants import verify_broker_grant, verify_live_lease
     claims = verify_broker_grant(envelope, verification_key, now=now)
-    if trusted_db_path is not None:
-        from .broker_grants import verify_live_lease
-        verify_live_lease(trusted_db_path, claims, now=now)
     verify_private_ledger(db_path)
-    db = sqlite3.connect(db_path, timeout=5, isolation_level=None)
+    trusted = None
+    if trusted_db_path is not None:
+        if not os.path.isabs(trusted_db_path) or not os.path.isfile(trusted_db_path):
+            raise PermissionError("Trusted database unavailable")
+        trusted = sqlite3.connect("file:" + trusted_db_path + "?mode=rw",
+                                  uri=True, timeout=5, isolation_level=None)
+    db = None
     try:
+        if trusted is not None:
+            trusted.execute("BEGIN IMMEDIATE")
+            verify_live_lease(trusted_db_path, claims, now=now, connection=trusted)
+        db = sqlite3.connect(db_path, timeout=5, isolation_level=None)
         db.execute("BEGIN IMMEDIATE")
         db.execute("""CREATE TABLE IF NOT EXISTS signed_grant_consumptions(
             grant_id TEXT PRIMARY KEY, task_id TEXT NOT NULL,
@@ -176,7 +183,11 @@ def execute_signed_grant(db_path, envelope, verification_key,
         db.execute("UPDATE signed_grant_consumptions SET status='completed' WHERE grant_id=?", (claims["id"],))
         return result
     finally:
-        db.close()
+        if trusted is not None:
+            trusted.rollback()
+            trusted.close()
+        if db is not None:
+            db.close()
 
 
 def handle_signed_connection(conn, trusted_uid, ledger_path, trusted_db_path,
