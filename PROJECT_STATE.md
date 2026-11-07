@@ -991,3 +991,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Trusted UID IPC VPS test failed at module import; harness patch (2026-11-07)
 - Operator ran `python3 -m agency.real_trusted_lease_ipc_test --execute` at 1f24dea: `ModuleNotFoundError: No module named 'agency.trusted_lease_ipc'` in non-root child, followed by broker `ConnectionResetError`; exit code 1. Root cause: child drops to `nobody` before Python import from `/root/Hermes-Agency`, which cannot be traversed by non-root UID.
 - Commit 5c2747a moves trusted IPC import before UID/GID drop, leaving repository permissions unchanged. Needs VPS rerun. No lease, stop-before-unlock, or crash-safety PASS may be claimed yet; production untouched.
+
+
+## Trusted IPC second VPS run: lock PASS, EOF timeout (2026-11-07)
+- At 7a77a85, operator observed `trusted_sqlite_lock_held_during_job=PASS` then root supervisor `TimeoutError` waiting for sidecar `stop` after broker socket close; overall exit 1.
+- Diagnosis: Linux multiprocessing fork duplicates both ends of each socketpair into child, preventing broker EOF delivery. Commit 4002942 explicitly closes inherited broker and supervisor endpoints in sidecar child before UID drop. Requires VPS rerun. Stop-before-unlock remains NOT VERIFIED; production unchanged.
