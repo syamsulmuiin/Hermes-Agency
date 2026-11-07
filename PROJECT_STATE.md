@@ -1261,3 +1261,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Exact production/development diff of `agency/systemd_broker.py` was only development's opt-in `execute_fenced_signed_grant`; production `handle_signed_connection -> execute_signed_grant -> run_systemd_job` is unfenced. The root broker is LIVE, so do not treat this as merely dormant legacy code.
 - Development commit `892a4e0` removes the direct executor fallback within optional `execute_fenced_signed_grant`: missing `supervised_executor` now fails closed. This does NOT close the active production `execute_signed_grant` bypass. Not yet VPS tested.
 - Production cutover blocker: install a root broker path with durable journal, signed grant consumption, trusted peer cleanup and independent systemd watchdog/startup recovery; verify live signed request, broker SIGKILL, startup gate, and rollback in isolated staging before controlled cutover. Never copy development `systemd_broker.py` alone to production and claim protection.
+
+## VPS regression verification at 0f8678d (2026-11-07)
+- User ran focused `tests.test_fenced_broker_ledger`: 1 test OK, exit 0.
+- Full `python3 -m unittest discover -s tests -q`: 279 tests OK (1 skipped), exit 0. CLI `usage:` output is expected from negative CLI validation cases.
+- `hermes-agency.service` and `hermes-signed-broker.service` both remained `active`. No production changes.
+- Follow-on source review confirms `staging_broker_job` is staging-only, requires isolated journal and trusted peer, while live root `supervised_broker.serve_forever` still calls `handle_signed_connection` with unfenced `execute_signed_grant` default. Existing staging launcher forks peer and starts root stop controller; a production cutover requires a separately validated deployment design for persistent broker, peer, journal and independent recovery. No production-ready cutover implemented yet.
