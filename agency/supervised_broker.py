@@ -16,7 +16,11 @@ from .systemd_broker import handle_signed_connection, verify_private_ledger
 
 
 def serve_forever(path, trusted_uid, trusted_gid, ledger, trusted_db, key_path,
-                  stop=None, executor=None):
+                  stop=None, executor=None, require_fenced=False):
+    if require_fenced:
+        # No production-grade persistent fenced listener is wired yet.
+        # Reject before binding the socket, never fall back to legacy execution.
+        raise PermissionError("Fenced production broker not installed")
     if os.geteuid() != 0 or trusted_uid <= 0 or trusted_gid <= 0:
         raise PermissionError("Root broker required")
     if pwd.getpwuid(trusted_uid).pw_gid != trusted_gid:
@@ -75,6 +79,7 @@ def main():
     parser.add_argument("--ledger", required=True)
     parser.add_argument("--trusted-db", required=True)
     parser.add_argument("--key", required=True)
+    parser.add_argument("--require-fenced", action="store_true")
     args = parser.parse_args()
     identity = pwd.getpwnam(args.trusted_user)
     stopping = [False]
@@ -82,7 +87,7 @@ def main():
     signal.signal(signal.SIGINT, lambda *_: stopping.__setitem__(0, True))
     serve_forever(args.socket, identity.pw_uid, identity.pw_gid,
                   args.ledger, args.trusted_db, args.key,
-                  stop=lambda: stopping[0])
+                  stop=lambda: stopping[0], require_fenced=args.require_fenced)
 
 
 if __name__ == "__main__":
