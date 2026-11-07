@@ -55,18 +55,19 @@ KEY="$BASE/keys/broker.key"
 LEDGER="$BASE/ledger/ledger.sqlite"
 # The test-only unit is started by systemd-run, not by a shell background job.
 systemd-run --system --unit="$UNIT" --collect \
+  --working-directory="$BASE/app" \
   --property=Type=exec --property=NoNewPrivileges=yes \
   --property=ProtectHome=no --property=ProtectSystem=strict \
   --property="ReadWritePaths=$BASE" \
   --property=PrivateTmp=no --property=RestrictAddressFamilies=AF_UNIX \
-  /usr/bin/python3 -m agency.supervised_broker \
+  /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_broker \
   --socket "$SOCK" --trusted-user "$TRUSTED_USER" \
   --ledger "$LEDGER" --trusted-db "$DB" --key "$KEY"
 for _ in $(seq 1 80); do
   [[ -S "$SOCK" ]] && break
   sleep 0.1
 done
-[[ -S "$SOCK" ]] || { journalctl -u "$UNIT" -n 30 --no-pager; exit 1; }
+[[ -S "$SOCK" ]] || { echo "Broker startup failed; unit journal:" >&2; journalctl -u "$UNIT" -n 30 --no-pager; exit 1; }
 [[ "$(stat -c '%a:%u:%g' "$SOCK")" == "660:0:$TGID" ]] || exit 1
 if runuser -u "$WORKER_USER" -- python3 -c 'import socket,sys;s=socket.socket(socket.AF_UNIX);s.connect(sys.argv[1])' "$SOCK" >/dev/null 2>&1; then
   echo "SECURITY FAILURE: worker connected" >&2; exit 1
@@ -80,7 +81,7 @@ from agency.broker_key_rotation import rotate_broker_key
 rotate_broker_key(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
 PY
 # New key must still authorize a fresh real approval from the trusted UID.
-runuser -u "$TRUSTED_USER" -- /usr/bin/python3 -m agency.supervised_integration_client \
+runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_integration_client \
   --database "$DB" --credential-key "$BASE/trusted/credential.key" \
   --broker-key "$KEY" --socket "$SOCK"
 systemctl is-active --quiet "$UNIT.service"
