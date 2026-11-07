@@ -1387,3 +1387,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - `agency.fenced_production_readiness`: static preflight PASS, expected production entrypoints confirmed, candidate working/socket/journal directories, trusted database, signing key present; trusted DB identity PASS; exit 0. `systemd-analyze verify` exit 0. Both production services remained active.
 - `FENCED_CANDIDATE_RUNTIME_CRASH_VERIFIED=NO` is emitted by static preflight only and remains intentionally unchanged. Independent real runtime tests have PASS markers.
 - Pending: validate actual candidate systemd sandbox (paths/permissions under service manager), cross-UID signing and grant compatibility, and independent recovery unit ordering. No production unit changes or cutover authorized/executed.
+
+## Production cutover security review and rollback plan (2026-11-07)
+- Static source review of candidate unit, grant transport and recovery revealed a deployment revision/sandbox blocker: candidate `WorkingDirectory=/opt/hermes-agency`, `ProtectHome=yes`, whereas previous tests ran from `/root/Hermes-Agency`. Mere presence of `/opt/hermes-agency` is insufficient to prove imports/dependencies and matching revision.
+- Grant envelope and submission transport are compatible in source, but real production caller/socket routing is not verified; PID1 ordering tested in isolated fixtures but not the exact candidate manifest.
+- Added `docs/FENCED_PRODUCTION_CUTOVER_RUNBOOK.md` (`c92a4bf`) with mandatory validation gates and fail-closed rollback. **No production cutover performed**; production services must remain unchanged until evidence and precise operator-approved switch plan.
