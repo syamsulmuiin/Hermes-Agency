@@ -6,6 +6,7 @@ Never reads production secrets or touches production sockets or systemd units.
 import json
 import os
 import pwd
+import shutil
 import socket
 import stat
 import subprocess
@@ -48,15 +49,27 @@ class RealSidecarFreezeStagingTests(unittest.TestCase):
             os.mkdir(sockdir, 0o700)
             os.chown(sockdir, identity.pw_uid, identity.pw_gid)
             path = os.path.join(sockdir, "operator.sock")
+            # Copy only the Python package into a disposable, non-root-readable staging tree.
+            source = os.path.join(os.path.dirname(os.path.dirname(__file__)), "agency")
+            staged = os.path.join(folder, "code")
+            os.mkdir(staged, 0o755)
+            shutil.copytree(source, os.path.join(staged, "agency"),
+                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            for root, dirs, files in os.walk(staged):
+                os.chmod(root, 0o755)
+                for name in dirs:
+                    os.chmod(os.path.join(root, name), 0o755)
+                for name in files:
+                    os.chmod(os.path.join(root, name), 0o644)
             request = json.dumps({"action": "approve", "approval_id": "test",
-                                  "operator_secret_hex": "00"*32}).encode() + b"\\n"
+                                  "operator_secret_hex": "00"*32}).encode() + b"\n"
             def launch():
                 proc = subprocess.Popen(
                     [sys.executable, "-c", CHILD, path, lock, freeze],
                     preexec_fn=lambda: (os.setgroups([]), os.setgid(identity.pw_gid),
                                        os.setuid(identity.pw_uid)),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    cwd=os.path.dirname(os.path.dirname(__file__)),
+                    cwd=staged, env={**os.environ, "PYTHONPATH": staged},
                 )
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
