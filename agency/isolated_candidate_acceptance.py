@@ -80,9 +80,9 @@ def run(*, deployed=None):
             raise PermissionError('Pinned /opt candidate deployment required')
         if not Path(repo, 'agency/fenced_broker_candidate.py').is_file():
             raise PermissionError('Candidate module missing')
-        sandbox = ('NoNewPrivileges=yes\\nProtectSystem=strict\\n'
-                   'ReadWritePaths=/run/hermes-staging\\n'
-                   'ProtectHome=yes\\nPrivateTmp=yes\\n')
+        sandbox = ('NoNewPrivileges=yes\nProtectSystem=strict\n'
+                   'ReadWritePaths=/run/hermes-staging\n'
+                   'ProtectHome=yes\nPrivateTmp=yes\n')
     python = os.path.realpath(sys.executable)
     token = secrets.token_hex(8)
     broker_unit = "hermes-isolated-candidate-" + token + ".service"
