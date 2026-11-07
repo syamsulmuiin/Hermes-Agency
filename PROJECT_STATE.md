@@ -921,3 +921,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Real systemd acceptance first VPS run: partial pass, overall FAIL (2026-11-07)
 - Operator ran `python3 -m agency.real_systemd_crash_acceptance --execute` on VPS. Output: `real_sigkill_recovery=PASS`, `startup_pending_failure_gate=PASS (application gate only)`, `socket_fence_eof_cleanup=PASS (not trusted lease IPC)`, then PermissionError `Fenced systemd unit stop failed` from repeated cleanup in `finally`; `REAL_SYSTEMD_TEST_EXIT_CODE=1`.
 - Commit 60267c3 changes test harness finally blocks to stop only if unit still active; this is a test-harness fix, NOT a change to fail-closed production supervisor. Needs VPS retest. Still no real ExecStartPre ordering or trusted SQLite lease IPC verification.
+
+
+## Real systemd crash acceptance VPS retest PASS (2026-11-07)
+- Operator pulled development/foundation to 8d19bbd and reran `python3 -m agency.real_systemd_crash_acceptance --execute`.
+- Output: `real_sigkill_recovery=PASS`, `startup_pending_failure_gate=PASS (application gate only)`, `socket_fence_eof_cleanup=PASS (not trusted lease IPC)`, `REAL_SYSTEMD_TEST_EXIT_CODE=0`.
+- Demonstrates real transient-unit stop/recovery after SIGKILL of isolated test broker and real unit stop on synthetic socket EOF. Does NOT establish actual systemd ExecStartPre startup gating, real trusted lease/SQLite IPC disconnect safety, or automatic independent recovery after crash. Production untouched.
