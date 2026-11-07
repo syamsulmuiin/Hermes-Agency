@@ -127,24 +127,24 @@ def exercise():
         repo = os.path.dirname(os.path.dirname(__file__))
         with open(watcher_script, "x", encoding="utf-8") as out:
             out.write(
-                "import os,sys,time\\n"
-                "open(" + repr(watcher_ready) + ",'x').write('ready')\\n"
-                "while not os.path.exists(" + repr(pidfile) + "): time.sleep(.05)\\n"
-                "pid=int(open(" + repr(pidfile) + ").read())\\n"
-                "while True:\\n"
-                " try:\\n"
-                "  state=open('/proc/%d/stat'%pid).read().split(') ',1)[1].split()[0]\\n"
-                "  if state in ('Z','X'): sys.exit(1)\\n"
-                " except FileNotFoundError: sys.exit(1)\\n"
-                " time.sleep(.05)\\n")
+                "import os,sys,time\n"
+                "open(" + repr(watcher_ready) + ",'x').write('ready')\n"
+                "while not os.path.exists(" + repr(pidfile) + "): time.sleep(.05)\n"
+                "pid=int(open(" + repr(pidfile) + ").read())\n"
+                "while True:\n"
+                " try:\n"
+                "  state=open('/proc/%d/stat'%pid).read().split(') ',1)[1].split()[0]\n"
+                "  if state in ('Z','X'): sys.exit(1)\n"
+                " except FileNotFoundError: sys.exit(1)\n"
+                " time.sleep(.05)\n")
         with open(recovery_script, "x", encoding="utf-8") as out:
             out.write(
-                "import os,sys,time\\n"
-                "sys.path.insert(0," + repr(repo) + ")\\n"
-                "while not os.path.isfile(" + repr(release) + "): time.sleep(.05)\\n"
-                "from agency.fenced_staging_recovery import recover_staging\\n"
-                "recover_staging(" + repr(journal) + ")\\n"
-                "open(" + repr(recovered) + ",'x').write('verified')\\n")
+                "import os,sys,time\n"
+                "sys.path.insert(0," + repr(repo) + ")\n"
+                "while not os.path.isfile(" + repr(release) + "): time.sleep(.05)\n"
+                "from agency.fenced_staging_recovery import recover_staging\n"
+                "recover_staging(" + repr(journal) + ")\n"
+                "open(" + repr(recovered) + ",'x').write('verified')\n")
         child = mp.get_context("fork").Process(
             target=broker_child,
             args=(grant, key, journal, database, identity.pw_uid,
@@ -152,12 +152,12 @@ def exercise():
         installed = []
         try:
             for path, body in (
-                (wp, "[Unit]\\nDescription=Isolated integrated staging broker watchdog\\n"
-                     "OnFailure=" + recovery + "\\n[Service]\\nType=simple\\nRestart=no\\n"
-                     "ExecStart=" + python + " " + watcher_script + "\\n"),
-                (rp, "[Unit]\\nDescription=Isolated integrated staging recovery\\n"
-                     "[Service]\\nType=oneshot\\n"
-                     "ExecStart=" + python + " " + recovery_script + "\\n")):
+                (wp, "[Unit]\nDescription=Isolated integrated staging broker watchdog\n"
+                     "OnFailure=" + recovery + "\n[Service]\nType=simple\nRestart=no\n"
+                     "ExecStart=" + python + " " + watcher_script + "\n"),
+                (rp, "[Unit]\nDescription=Isolated integrated staging recovery\n"
+                     "[Service]\nType=oneshot\n"
+                     "ExecStart=" + python + " " + recovery_script + "\n")):
                 with open(path, "x", encoding="utf-8") as out:
                     out.write(body)
                 os.chmod(path, 0o600)
