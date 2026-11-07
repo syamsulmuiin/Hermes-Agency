@@ -47,7 +47,12 @@ def _read_grant(conn, trusted_uid):
 
 
 def serve_candidate(path, uid, gid, ledger, journal, trusted_db, key_path, *,
-                    stop=None, session=run_staging_session):
+                    stop=None, session=run_staging_session,
+                    isolated_candidate=False):
+    if isolated_candidate:
+        from .fenced_staging_launcher import _staging_path
+        for candidate_path in (path, ledger, journal, trusted_db, key_path):
+            _staging_path(candidate_path)
     if os.geteuid() != 0 or uid <= 0 or gid <= 0:
         raise PermissionError("Root and dedicated trusted UID required")
     if pwd.getpwuid(uid).pw_gid != gid:
@@ -88,7 +93,9 @@ def serve_candidate(path, uid, gid, ledger, journal, trusted_db, key_path, *,
                         verify_broker_grant(grant, key)
                         result = session(grant, key, journal, trusted_db,
                                          trusted_uid=uid, trusted_gid=gid,
-                                         ledger=ledger, production_candidate=True)
+                                         ledger=ledger,
+                                         production_candidate=not isolated_candidate,
+                                         **({"isolated_candidate": True} if isolated_candidate else {}))
                         conn.sendall((json.dumps(result) + "\n").encode())
                     except (PermissionError, ValueError, OSError) as exc:
                         print(json.dumps({"fenced_broker": "denied",
@@ -110,6 +117,7 @@ def main(argv=None):
     parser.add_argument("--trusted-db", required=True)
     parser.add_argument("--key", required=True)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--isolated-test", action="store_true")
     args = parser.parse_args(argv)
     if not args.execute:
         parser.error("Explicit --execute required")
@@ -119,7 +127,8 @@ def main(argv=None):
     signal.signal(signal.SIGINT, lambda *_: stopping.__setitem__(0, True))
     serve_candidate(args.socket, identity.pw_uid, identity.pw_gid,
                     args.ledger, args.journal, args.trusted_db, args.key,
-                    stop=lambda: stopping[0])
+                    stop=lambda: stopping[0],
+                    isolated_candidate=args.isolated_test)
 
 
 if __name__ == "__main__":
