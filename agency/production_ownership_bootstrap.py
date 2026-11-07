@@ -15,11 +15,24 @@ JOURNAL = "/var/lib/hermes-broker/owned-units.sqlite"
 
 
 def _inactive(unit):
-    result = subprocess.run(
-        ["/usr/bin/systemctl", "is-active", unit],
-        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-        timeout=5, check=False)
-    return result.returncode in (0, 3) and result.stdout.strip() in (b"inactive", b"failed")
+    """Require systemd to confirm no active process or queued job."""
+    try:
+        result = subprocess.run(
+            ["/usr/bin/systemctl", "show", unit,
+             "--property=LoadState", "--property=ActiveState",
+             "--property=MainPID", "--property=Job"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            timeout=5, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if result.returncode != 0:
+        return False
+    fields = dict(line.split("=", 1) for line in result.stdout.decode(
+        "ascii", "replace").splitlines() if "=" in line)
+    return (fields.get("LoadState") == "loaded"
+            and fields.get("ActiveState") in ("inactive", "failed")
+            and fields.get("MainPID") == "0"
+            and fields.get("Job") in ("", "0"))
 
 
 def bootstrap():
