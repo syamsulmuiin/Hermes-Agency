@@ -590,3 +590,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS AST output identified relative imports for the broker/operator runtime; no parser errors despite duplicated terminal echo. Existing baseline has 27 matching Python files, one differing and 22 missing.
 - Added `deploy/test_runtime_staging_imports.sh`: creates throwaway `/tmp` package, copies only top-level `.py` source files from installed production (no keys/DB), overlays 11 explicitly listed runtime/operator files from development including `trusted_execution.py`, and uses isolated Python (`-I`) to assert 14 critical modules import **from staging only**. Cleans up temporary package on exit. Does not change production.
 - **Test has not been run on VPS yet.** Next: run `bash -n deploy/test_runtime_staging_imports.sh` and `bash deploy/test_runtime_staging_imports.sh`, then report exit code and main service status. An import PASS is not a production execution or final sandbox acceptance.
+
+
+## VPS production-based minimal staging import acceptance (2026-11-07)
+- Operator ran `bash -n deploy/test_runtime_staging_imports.sh`: `SYNTAX_EXIT_CODE=0`.
+- Disposable package built from installed production Python sources plus the explicit 11-file runtime overlay imported all 14 selected modules successfully (`STAGING_IMPORT_EXIT_CODE=0`, `STAGING_EXIT_CODE=0`). Script reported `PRODUCTION_UNCHANGED=YES`; existing `hermes-agency.service` remained `active`.
+- This validates module import resolution only; does not establish full runtime/ABI compatibility, complete production unit hardening, data migration safety or production activation approval.
+- Next: finalize optional broker/operator systemd units, secure runtime-directory lifecycle and provisioning/rollback runbook; review without installing, provisioning credentials or restarting production. Explicit approval required for activation.
