@@ -6,11 +6,10 @@ reopens admission. This does not stop brokers or modify systemd.
 import contextlib
 import fcntl
 import os
-import pwd
 import stat
 import time
 
-LOCK = "/run/hermes-operator/admission.lock"
+LOCK = "/run/hermes-admission/admission.lock"
 
 
 @contextlib.contextmanager
@@ -23,8 +22,8 @@ def exclusive_admission_drain(*, timeout=30):
     try:
         info = os.fstat(fd)
         if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
-                or info.st_uid not in (0, pwd.getpwnam('hermes-trusted').pw_uid)
-                or stat.S_IMODE(info.st_mode) & 0o077):
+                or info.st_uid != 0
+                or stat.S_IMODE(info.st_mode) != 0o640):
             raise PermissionError("Unsafe admission lock")
         deadline = time.monotonic() + timeout
         while True:
