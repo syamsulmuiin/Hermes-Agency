@@ -647,3 +647,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Production operator verifier provisioning (2026-11-07)
 - User executed `runuser -u hermes-trusted -g hermes-trusted -- /usr/bin/python3 -m agency.operator_provision --path /var/lib/hermes-agency/keys/operator-verifier.json --identity operator` from `/opt/hermes-agency`; interactive command returned `operator_verifier_provisioned=PASS`.
 - Operator secret was not disclosed. File mode/ownership and main service status still require separate read-only verification before optional unit installation. Do not repeat exclusive provisioning or reveal secret.
+
+
+## Production operator and broker credential permission checks PASS (2026-11-07)
+- VPS verified operator verifier regular non-symlink `0600 hermes-trusted:hermes-trusted` (`OPERATOR_VERIFIER_PERMISSIONS=PASS`), broker signing key `0640 root:hermes-trusted` and 64-byte length (`BROKER_CREDENTIAL=PASS`), main service `active` (`MAIN_SERVICE=ACTIVE`).
+- Broker and operator credential provisioning completed. Next: install opt-in tmpfiles and service unit definitions in separate, controlled stages, verify without starting, then explicit runtime security checks before enablement. No service activation reported yet.
