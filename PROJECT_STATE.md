@@ -816,3 +816,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Commit e49936d: added agency/fence_process_supervisor.py. Opt-in dedicated process-group subprocess runner watches trusted fence socket for EOF, rejects unexpected traffic, enforces deadline and kills/reaps its process group on failure. It is NOT wired to production systemd-run or broker.
 - Commit 385534b: added 4 isolated tests for success, disconnect, timeout and unexpected IPC traffic. NOT YET RUN on VPS.
 - SECURITY GATE: process-group termination does not terminate a detached systemd transient unit or independently reparented processes. Broker/sidecar crash safety requires systemd unit identity, stop/kill verification, and recovery semantics before real noop acceptance. No production restart or database changes.
+
+
+## Supervisor and ledger regression verified on VPS (2026-11-07)
+- Operator pulled development/foundation to 65b0b74 and ran six modules: test_fence_process_supervisor, test_fenced_broker_ledger, test_trusted_lease_ipc, test_trusted_lease_fence, test_trusted_broker_socket, test_broker_grants.
+- Result: 33 tests in 1.341s, OK, TEST_EXIT_CODE=0. Four subprocess-supervisor cases passed (success, disconnect, timeout, unexpected traffic), as did atomic ledger/replay and existing regressions.
+- Correction: test_trusted_lease_ipc methods still appear twice in the output. Reusing TrustedLeaseIPCTests.setUp/tearDown via import causes unittest loader to discover that imported TestCase class in test_fenced_broker_ledger too. Remove the module-level TestCase import or extract a non-TestCase fixture before claiming duplicate tests resolved.
+- Production systemd transient unit kill-on-fence-loss, crash recovery, listener wiring and real noop acceptance remain unverified and blocked.
