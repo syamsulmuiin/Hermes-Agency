@@ -60,7 +60,7 @@ class TrustedBrokerSocketTests(unittest.TestCase):
         thread.start()
         with b:
             try:
-                b.sendall((json.dumps({"grant":grant})+"\\n").encode())
+                b.sendall((json.dumps({"grant":grant})+"\n").encode())
                 b.shutdown(socket.SHUT_WR)
                 result["reply"] = b.recv(4096)
             except (BrokenPipeError, ConnectionResetError):
