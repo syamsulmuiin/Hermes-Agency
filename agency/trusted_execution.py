@@ -6,6 +6,7 @@ No network API or tool execution is exposed here.
 """
 from .portable_runtime import PortableAgentRuntime
 from .trusted import TrustedApprovalService
+from .trusted_broker_adapter import execute_approved_job
 
 
 class TrustedAgentExecution:
@@ -29,6 +30,19 @@ class TrustedAgentExecution:
         if identity != agent:
             raise PermissionError("Worker identity does not match stage agent")
         return self._runtime.submit_stage_result(task_id, agent, result)
+
+    def execute_operator_approved_job(self, approval_id, task_id, job,
+                                      worker_credential, lease_token,
+                                      broker_key_path, broker_socket_path):
+        """Trusted-process-only hook after externally authenticated approval.
+
+        Never expose this through the worker stage socket/protocol.
+        This method neither issues credentials nor approves requests.
+        """
+        return execute_approved_job(
+            self._approval_service, approval_id, task_id, job,
+            worker_credential, lease_token, broker_key_path, broker_socket_path
+        )
 
     def capabilities(self):
         return self._runtime.capabilities()
