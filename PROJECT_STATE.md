@@ -688,3 +688,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Verified identities: hermes-worker UID 995/GID 985 (groups 985,987); hermes-trusted UID 997/GID 986 (groups 986,987). Broker parent `/run/hermes-broker` root:hermes-trusted 0710; socket root:hermes-trusted 0660.
 - Actual `runuser -u hermes-worker` socket connect returned `PermissionError`, `WORKER_ACCESS_DENIED=PASS`. Broker and main service remain active.
 - Next: safely test malformed/unsigned trusted-UID request rejection, then operator sidecar and valid signed grant with narrow authorized fixture. Keep optional services disabled at boot and broker temporary `Restart=no` during testing.
+
+
+## Production unsigned request rejection (2026-11-07)
+- As `hermes-trusted`, connection to `/run/hermes-broker/broker.sock` succeeded. Sending `{"grant":{}}\n` returned EOF (`b''`); broker journal logged `{"broker":"denied","reason":"PermissionError"}`. Broker and main service remained active.
+- This validates one malformed/unsigned request rejection, not replay/expiry/forgery or valid signed grant acceptance. Next test operator sidecar startup and socket identity under temporary `Restart=no`, then explicit controlled signed grant end-to-end.
