@@ -46,7 +46,8 @@ def run_acceptance(trusted_user="hermes-trusted", worker_user="hermes-worker"):
         raise PermissionError("Root operator required")
     trusted = pwd.getpwnam(trusted_user)
     worker = pwd.getpwnam(worker_user)
-    if trusted.pw_uid == worker.pw_uid or trusted.pw_gid == worker.pw_gid:
+    if (trusted.pw_uid == worker.pw_uid or
+            trusted.pw_gid in os.getgrouplist(worker_user, worker.pw_gid)):
         raise PermissionError("Trusted and worker identities must be distinct")
     with tempfile.TemporaryDirectory(prefix="hermes-full-e2e-") as base:
         os.chmod(base, 0o711)
