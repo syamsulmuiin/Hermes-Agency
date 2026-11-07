@@ -74,8 +74,8 @@ class IsolatedSystemdAdapter:
     def attest(self):
         if os.geteuid() != 0 or not os.path.isdir("/run/systemd/system"):
             raise PermissionError("Root and real systemd required")
-        if _active(OLD) or _active(NEW):
-            raise RuntimeError("Residual isolated test unit is active")
+        if not _active(OLD) or _active(NEW):
+            raise RuntimeError("Isolated legacy must be active and fenced inactive")
         self._inject("attest")
 
     def freeze(self):
