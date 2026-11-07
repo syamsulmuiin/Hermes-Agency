@@ -986,3 +986,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Isolated real trusted UID + SQLite + systemd acceptance harness (2026-11-07)
 - Commit 0032308 adds opt-in `python3 -m agency.real_trusted_lease_ipc_test --execute`: root supervisor launches random `hermes-fenced-*` sleep unit; non-root `nobody` trusted sidecar uses inherited UNIX socket, `SO_PEERCRED` check, test-only HMAC grant and private SQLite trusted fixture. On broker socket EOF sidecar requests stop from root supervisor and waits for verified acknowledgment before returning from trusted `BEGIN IMMEDIATE`; independent contender must fail to acquire SQLite writer lock before stop verification and succeed afterward.
 - UNTESTED on VPS; synthetic grant fixture is NOT a real approval; this proves only a cooperative root supervisor scenario if it passes. Cleanup failure, root supervisor SIGKILL, trusted sidecar SIGKILL, lock release on process crash, independent watchdog and production wiring are NOT safe/verified. Do not activate in production.
+
+
+## Trusted UID IPC VPS test failed at module import; harness patch (2026-11-07)
+- Operator ran `python3 -m agency.real_trusted_lease_ipc_test --execute` at 1f24dea: `ModuleNotFoundError: No module named 'agency.trusted_lease_ipc'` in non-root child, followed by broker `ConnectionResetError`; exit code 1. Root cause: child drops to `nobody` before Python import from `/root/Hermes-Agency`, which cannot be traversed by non-root UID.
+- Commit 5c2747a moves trusted IPC import before UID/GID drop, leaving repository permissions unchanged. Needs VPS rerun. No lease, stop-before-unlock, or crash-safety PASS may be claimed yet; production untouched.
