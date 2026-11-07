@@ -19,6 +19,9 @@ import time
 from .broker_grants import _canonical
 from .fenced_startup_gate import require_recovered
 from .fenced_unit_journal import recover_owned_units, register_before_launch
+from .fenced_staging_broker import unit_for_grant
+from .fenced_systemd_supervisor import stop_and_verify_unit
+from .real_systemd_crash_acceptance import active
 from .real_trusted_lease_ipc_test import fixture
 from .security import fingerprint
 from .systemd_broker import initialize_ledger
@@ -72,6 +75,9 @@ def run():
     database = folder + "/trusted.sqlite"
     key_path = folder + "/broker.key"
     broker = None
+    active_client = None
+    active_unit = None
+    hold_marker = folder + "/hold.marker"
     try:
         initialize_ledger(ledger)
         recover_owned_units(journal)
@@ -101,7 +107,8 @@ def run():
                  "--execute", "--isolated-test"],
                 cwd=os.path.dirname(os.path.dirname(__file__)),
                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL, start_new_session=True)
+                stderr=subprocess.DEVNULL, start_new_session=True,
+                env={**os.environ, "HERMES_ISOLATED_HOLD_MARKER": hold_marker})
             wait_socket(socket_path, broker)
 
         def stop():
@@ -172,10 +179,98 @@ def run():
         recover_owned_units(journal)
         start()
         print("REAL_CANDIDATE_RECOVERED_RESTART=PASS", flush=True)
+        # Exercise the actual candidate while a signed identity job is still
+        # running, not merely after a completed noop.
+        stop()
+        active_claims = dict(claims)
+        active_claims["id"] = secrets.token_hex(32)
+        active_claims["job"] = "identity"
+        active_claims["params_hash"] = fingerprint({"job": "identity"})
+        active_claims["iat"] = time.time()
+        active_claims["exp"] = active_claims["iat"] + 55
+        active_grant = {"claims": active_claims, "signature":
+                        hmac.new(key, _canonical(active_claims), hashlib.sha256).hexdigest()}
+        with sqlite3.connect(database) as db:
+            db.execute("INSERT INTO execution_grants VALUES (?,?,?,?,?,?,?)",
+                       (active_claims["id"], active_claims["task"],
+                        active_claims["approval"], active_claims["worker"],
+                        active_claims["lease_generation"], "execute_shell",
+                        active_claims["params_hash"]))
+        with open(hold_marker, "x", encoding="ascii") as out:
+            out.write("isolated-test-only")
+        active_unit = unit_for_grant(active_claims["id"])
+        active_request = json.dumps({"grant": active_grant}, separators=(",", ":"))
+        start()
+        active_client = subprocess.Popen(
+            [sys.executable, "-c", CLIENT, socket_path, active_request],
+            preexec_fn=lambda: (os.setgroups([]), os.setgid(identity.pw_gid),
+                                 os.setuid(identity.pw_uid)),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        deadline = time.monotonic() + 12
+        while time.monotonic() < deadline:
+            with sqlite3.connect(ledger) as db:
+                row = db.execute(
+                    "SELECT status FROM signed_grant_consumptions WHERE grant_id=?",
+                    (active_claims["id"],)).fetchone()
+            if row == ("started",) and active(active_unit):
+                break
+            if active_client.poll() is not None or broker.poll() is not None:
+                raise AssertionError("Active broker/job exited before SIGKILL")
+            time.sleep(.05)
+        else:
+            raise AssertionError("Signed active job did not reach running state")
+        print("REAL_CANDIDATE_ACTIVE_SIGNED_JOB=PASS", flush=True)
+        broker.kill()
+        broker.wait(timeout=10)
+        broker = None
+        active_client.communicate(timeout=10)
+        active_client = None
+        with sqlite3.connect(ledger) as db:
+            row = db.execute(
+                "SELECT status FROM signed_grant_consumptions WHERE grant_id=?",
+                (active_claims["id"],)).fetchone()
+        if row != ("started",):
+            raise AssertionError("SIGKILL unexpectedly changed durable grant state")
+        try:
+            require_recovered(journal)
+        except PermissionError:
+            print("REAL_CANDIDATE_ACTIVE_CRASH_GATE=PASS", flush=True)
+        else:
+            raise AssertionError("Active crash failed to fence restart")
+        if os.path.lexists(socket_path):
+            os.unlink(socket_path)
+        # The isolated harness performs explicit recovery; automatic PID1
+        # OnFailure recovery is covered by the separate systemd suite.
+        recovered = recover_owned_units(journal)
+        if active_unit not in recovered or active(active_unit):
+            raise AssertionError("Active job not stop-verified by recovery")
+        require_recovered(journal)
+        print("REAL_CANDIDATE_ACTIVE_CRASH_RECOVERY=PASS", flush=True)
+        start()
+        replay = json.dumps({"grant": active_grant}, separators=(",", ":"))
+        result = subprocess.run(
+            [sys.executable, "-c", CLIENT, socket_path, replay],
+            preexec_fn=lambda: (os.setgroups([]), os.setgid(identity.pw_gid),
+                                 os.setuid(identity.pw_uid)),
+            capture_output=True, text=True, timeout=20, check=False)
+        if result.returncode or result.stdout.strip() != "DENIED_NO_REPLY":
+            raise AssertionError("Active-crash grant replay accepted: " + result.stdout)
+        with sqlite3.connect(ledger) as db:
+            rows = db.execute(
+                "SELECT status FROM signed_grant_consumptions WHERE grant_id=?",
+                (active_claims["id"],)).fetchall()
+        if rows != [("started",)]:
+            raise AssertionError("Active-crash replay altered persistent ledger")
+        print("REAL_CANDIDATE_ACTIVE_CRASH_REPLAY_DENIED=PASS", flush=True)
+        print("ACTIVE_JOB_SIGKILL_RECOVERY_E2E=PASS", flush=True)
         print("REAL_CANDIDATE_SOCKET_REPLAY_E2E=PASS", flush=True)
-        print("ACTIVE_JOB_SIGKILL_RECOVERY_E2E=NOT_TESTED", flush=True)
         print("PRODUCTION_CUTOVER_GO=NO", flush=True)
     finally:
+        if active_client is not None and active_client.poll() is None:
+            active_client.kill()
+            active_client.communicate(timeout=10)
+        if active_unit is not None:
+            stop_and_verify_unit(active_unit)
         if broker is not None and broker.poll() is None:
             broker.kill()
             broker.wait(timeout=10)
