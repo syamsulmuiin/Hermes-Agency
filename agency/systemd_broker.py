@@ -187,12 +187,12 @@ def handle_signed_connection(conn, trusted_uid, ledger_path, trusted_db_path,
         raise PermissionError("Untrusted signed broker peer")
     conn.settimeout(5)
     data = bytearray()
-    while len(data) <= 4096 and b"\\n" not in data:
+    while len(data) <= 4096 and b"\n" not in data:
         chunk = conn.recv(512)
         if not chunk:
             break
         data.extend(chunk)
-    if len(data) > 4096 or not data.endswith(b"\\n") or data.count(b"\\n") != 1:
+    if len(data) > 4096 or not data.endswith(b"\n") or data.count(b"\n") != 1:
         raise PermissionError("Invalid signed broker framing")
     try:
         request = json.loads(data)
@@ -206,5 +206,5 @@ def handle_signed_connection(conn, trusted_uid, ledger_path, trusted_db_path,
     result = execute_signed_grant(ledger_path, request["grant"], verification_key,
                                   executor=executor, now=now,
                                   trusted_db_path=trusted_db_path)
-    conn.sendall((json.dumps(result) + "\\n").encode())
+    conn.sendall((json.dumps(result) + "\n").encode())
     return result
