@@ -1160,3 +1160,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator reported at commit `cc6ac3c`: `STATIC_EXIT=0`, `UNIT_EXIT=0`, `ACCEPTANCE_EXIT=0`, `PRODUCTION_SERVICE_EXIT=0`, production service active.
 - The aggregate acceptance runner validates existing isolated real crash scenarios, NOT the new launcher as one system with independent watchdog. No evidence yet of new-launcher broker SIGKILL, concurrent launch/recovery at process level, or closed direct systemd bypass.
 - Preserve staging-only deployment boundary. Next implement and test true end-to-end launcher with independent systemd watchdog/recovery and fail-closed bypass enforcement before proposing production integration.
+
+
+## New-launcher real systemd acceptance smoke (2026-11-07; NOT YET EXECUTED)
+- Added `agency/real_staging_launcher_acceptance_test.py --execute`: root-only, real-systemd opt-in fixture in `/run/hermes-staging/accept-*`, synthetic signed grant, SQLite lease provenance, non-root trusted peer, new `run_staging_session` with allowlisted `noop`, verified unit shutdown and journal gate.
+- This smoke does NOT inject broker SIGKILL or demonstrate independent systemd watchdog recovery; its PASS markers are only for normal execution. Requires VPS validation and likely integration debugging.
+- Important remaining work: dedicated watchdog-managed broker process with OnFailure independent recovery and a real active-unit SIGKILL test; recovery startup gate concurrency across processes; close direct operator systemd bypass. Do not claim user-requested end-to-end crash acceptance complete yet.
