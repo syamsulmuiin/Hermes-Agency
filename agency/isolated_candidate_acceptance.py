@@ -1,7 +1,6 @@
 """One-shot isolated persistent candidate acceptance. Never touches production units."""
 import argparse
-import hashlib
-import hmac
+import json
 import os
 import pwd
 import secrets
@@ -13,14 +12,15 @@ import sys
 import tempfile
 import time
 
-from .broker_grants import _canonical
+from .broker_grants import issue_broker_grant
+from .operator_auth import LocalOperatorGate
+from .security import SecureAgencyStore
+from .trusted import TrustedApprovalService
 from .fenced_staging_broker import unit_for_grant
 from .fenced_startup_gate import require_recovered
 from .fenced_systemd_supervisor import stop_and_verify_unit
 from .fenced_unit_journal import _connect
-from .real_trusted_lease_ipc_test import fixture
 from .real_systemd_crash_acceptance import active
-from .security import fingerprint
 from .signed_broker_service import submit_signed_grant
 from .systemd_broker import initialize_ledger
 
@@ -39,16 +39,57 @@ def until(fn, seconds=20):
     return False
 
 
-def signed(key, job):
-    now = time.time()
-    claims = dict(v=1, aud="hermes-systemd-broker-v1",
-                  id=secrets.token_hex(32), approval=secrets.token_hex(16),
-                  task=secrets.token_hex(16), worker="staging-worker",
-                  lease_generation=1, job=job,
-                  params_hash=fingerprint({"job": job}),
-                  iat=now, exp=now+60)
-    return claims, {"claims": claims, "signature": hmac.new(
-        key, _canonical(claims), hashlib.sha256).hexdigest()}
+def real_operator_grants(dbpath, keypath, identity):
+    """Create approved grants inside a disposable non-root staging process."""
+    read_fd, write_fd = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(read_fd)
+        try:
+            os.setgroups([])
+            os.setgid(identity.pw_gid)
+            os.setuid(identity.pw_uid)
+            from pathlib import Path
+            from .trusted_broker_adapter import _trusted_key
+            store = SecureAgencyStore(Path(dbpath))
+            service = TrustedApprovalService(store, secrets.token_bytes(32))
+            operator_secret = secrets.token_bytes(32)
+            salt, verifier = LocalOperatorGate.provision(operator_secret)
+            gate = LocalOperatorGate(service, "staging-operator", salt, verifier)
+            key = _trusted_key(keypath)
+            envelopes = []
+            for job in ("noop", "identity"):
+                task = store.create_task("Isolated operator staging", "developer")
+                approval = store.request_approval(
+                    task, "execute_shell", {"job": job}, "developer")
+                lease = store.claim(task, "staging-worker", ttl=180)
+                worker = service.issue_credential("staging-worker", "worker")
+                try:
+                    gate.authenticate(b"invalid-staging-operator-secret")
+                except PermissionError:
+                    pass
+                else:
+                    raise AssertionError("Wrong operator secret accepted")
+                service.decide(approval, gate.authenticate(operator_secret), True)
+                envelopes.append(issue_broker_grant(
+                    service, approval, task, job, worker, lease, key, ttl=60))
+            store.close()
+            os.write(write_fd, json.dumps(envelopes).encode())
+            os._exit(0)
+        except BaseException as exc:
+            os.write(write_fd, ("ERROR:" + type(exc).__name__ + ":" + str(exc)).encode()[:1024])
+            os._exit(1)
+    os.close(write_fd)
+    with os.fdopen(read_fd, "rb") as pipe:
+        payload = pipe.read(16384)
+    _, status = os.waitpid(pid, 0)
+    if os.waitstatus_to_exitcode(status) != 0:
+        raise AssertionError("Trusted operator grant setup failed: " +
+                             payload.decode("utf-8", "replace"))
+    envelopes = json.loads(payload)
+    if len(envelopes) != 2:
+        raise AssertionError("Expected two real operator grants")
+    return [(envelope["claims"], envelope) for envelope in envelopes]
 
 
 def gate_denied(path):
@@ -101,7 +142,7 @@ def run(*, deployed=None):
         ledger = rootdir + "/ledger.sqlite"
         journal = rootdir + "/owned.sqlite"
         keydir = folder + "/key"
-        os.mkdir(keydir, 0o700)
+        os.mkdir(keydir, 0o711)
         keypath = keydir + "/signing.key"
         trusted_dir = folder + "/trusted"
         os.mkdir(trusted_dir, 0o700)
@@ -118,20 +159,9 @@ def run(*, deployed=None):
         initialize_ledger(ledger)
         with _connect(journal):
             pass
-        c1, g1 = signed(key, "noop")
-        c2, g2 = signed(key, "identity")
-        fixture(dbpath, c1)
-        # The fixture schema is shared; append a second live lease.
-        with sqlite3.connect(dbpath) as db:
-            db.execute("INSERT INTO tasks VALUES (?,'in_progress','developer')", (c2["task"],))
-            db.execute("INSERT INTO task_leases VALUES (?,?,?,?)",
-                       (c2["task"], c2["worker"], 1, time.time()+180))
-            db.execute("INSERT INTO approvals VALUES (?,'consumed')", (c2["approval"],))
-            db.execute("INSERT INTO execution_grants VALUES (?,?,?,?,?,?,?)",
-                       (c2["id"],c2["task"],c2["approval"],c2["worker"],1,
-                        "execute_shell",c2["params_hash"]))
-        os.chown(dbpath, identity.pw_uid, identity.pw_gid)
-        os.chmod(dbpath, 0o600)
+        (c1, g1), (c2, g2) = real_operator_grants(
+            dbpath, keypath, identity)
+        print("CANDIDATE_REAL_OPERATOR_APPROVAL=PASS", flush=True)
         with open(marker, "x") as out:
             out.write(token)
         broker_command = (python + " -m agency.fenced_broker_candidate"
