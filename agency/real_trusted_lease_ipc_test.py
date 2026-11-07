@@ -24,10 +24,12 @@ from .security import fingerprint
 
 
 def sidecar(conn, control, database, key, uid):
+    # Import before dropping privileges: /root is not traversable by nobody.
+    # The child retains only preloaded Python code, not root filesystem access.
+    from .trusted_lease_ipc import serve_fence_connection
     os.setgroups([])
     os.setgid(uid)
     os.setuid(uid)
-    from .trusted_lease_ipc import serve_fence_connection
 
     def cleanup(_claims):
         # Trusted sidecar cannot control systemd. Ask the independent root
