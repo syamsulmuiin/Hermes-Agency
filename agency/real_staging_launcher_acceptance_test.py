@@ -52,6 +52,11 @@ def exercise():
         fixture(database, claims)
         os.chown(database, identity.pw_uid, identity.pw_gid)
         os.chmod(database, 0o600)
+        # Bootstrap the isolated root-owned journal before the launch lock.
+        # The production journal is never opened or initialized here.
+        from .fenced_unit_journal import _connect
+        with _connect(journal):
+            pass
         unit = unit_for_grant(claims["id"])
         try:
             result = run_staging_session(
