@@ -74,10 +74,12 @@ def audit():
     for unit in ("hermes-fenced-broker-candidate.service",
                  "hermes-fenced-recovery-candidate.service"):
         try:
-            state = _show(unit, "LoadState", "FragmentPath", "ExecStart",
+            state = _show(unit, "LoadState", "FragmentPath", "WorkingDirectory", "ExecStart",
                           "ExecStartPre", "ExecStopPost", "OnFailure")
             evidence.append(unit + " LOAD=" + state.get("LoadState", "unknown")
                             + " FRAGMENT=" + state.get("FragmentPath", ""))
+            if state.get("WorkingDirectory") != str(snapshot):
+                blockers.append(unit + ": installed working directory does not match accepted snapshot")
             if state.get("LoadState") != "loaded" or not state.get("FragmentPath"):
                 blockers.append(unit + ": candidate systemd unit not installed")
             elif unit.endswith("broker-candidate.service"):
