@@ -682,3 +682,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - With a temporary `/run/systemd/system/hermes-signed-broker.service.d/90-startup-test.conf` override `Restart=no`, broker starts successfully: `ActiveState=active`, `SubState=running`, `MainPID=994337`, `NRestarts=0`, root process.
 - `/run/hermes-broker/broker.sock` exists, mode 0660, owner root:hermes-trusted; parent `/run/hermes-broker` mode 0710; `ss -xlpn` confirms broker process listening. Main Hermes remains active. This verifies startup/listener only, not signed grant security or operator sidecar.
 - Next: test unauthorized peer rejection and authorized signed request in controlled scope, verify ledger/DB and no unauthorized systemd jobs, then operator sidecar. Keep `Restart=no` and optional units disabled until end-to-end acceptance.
+
+
+## Production worker socket boundary (2026-11-07)
+- Verified identities: hermes-worker UID 995/GID 985 (groups 985,987); hermes-trusted UID 997/GID 986 (groups 986,987). Broker parent `/run/hermes-broker` root:hermes-trusted 0710; socket root:hermes-trusted 0660.
+- Actual `runuser -u hermes-worker` socket connect returned `PermissionError`, `WORKER_ACCESS_DENIED=PASS`. Broker and main service remain active.
+- Next: safely test malformed/unsigned trusted-UID request rejection, then operator sidecar and valid signed grant with narrow authorized fixture. Keep optional services disabled at boot and broker temporary `Restart=no` during testing.
