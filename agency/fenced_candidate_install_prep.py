@@ -17,12 +17,13 @@ ROOT = Path(__file__).resolve().parent.parent
 SNAPSHOT = Path("/opt/hermes-fenced-" + EXPECTED_PIN)
 UNITS = ("hermes-fenced-broker-candidate.service",
          "hermes-fenced-recovery-candidate.service")
+# Admission drain is a separately deployed maintenance controller.
+# It requires its own attestation before cutover.
 SOURCE_FILES = (
     "agency/fenced_broker_candidate.py",
     "agency/fenced_owned_recovery.py",
     "agency/fenced_startup_gate.py",
     "agency/fenced_unit_journal.py",
-    "agency/production_admission_drain.py",
     "agency/operator_control.py",
 )
 
@@ -56,6 +57,7 @@ def main():
                     print("PINNED_SOURCE_MATCH=" + name)
             except (OSError, PermissionError, subprocess.TimeoutExpired) as exc:
                 blockers.append("Snapshot file not verifiable: " + name + " " + type(exc).__name__)
+    print("SEPARATE_ATTESTATION_REQUIRED=agency/production_admission_drain.py")
     for unit in UNITS:
         path = ROOT / "deploy/systemd" / unit
         try:
