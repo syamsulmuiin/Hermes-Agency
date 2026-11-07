@@ -1128,3 +1128,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added `tests/test_fenced_staging_peer_recovery.py` covering allowed/denied stop control, trusted non-root requirement and isolated recovery. NOT YET RUN on VPS.
 - Remaining deployment gap: no independently supervised systemd watchdog unit or automated broker/peer process lifecycle has been installed. These are primitives, not proof of an end-to-end operational runtime. Root stop control and broker launch must be orchestrated concurrently by a staging-only launcher, with robust timeouts, identity verification, and failure cleanup; avoid claiming full integration until real systemd crash/concurrency tests PASS.
 - Existing `systemd_jobs.run_systemd_job` remains an operator-only direct execution path. Bypass closure is still pending; changing it must preserve existing diagnostic tests and require a staged migration. Production is untouched.
+
+
+## Operator VPS validation: staging peer and recovery primitives (2026-11-07)
+- Operator reported validation at commit `73e7b9e`: `STATIC_EXIT=0`, `UNIT_EXIT=0`, `CRASH_EXIT=0`, `PRODUCTION_SERVICE_EXIT=0`, production `hermes-agency.service` active.
+- This confirms aggregate checks only; full new unit test counts and independent staging broker+peer+watchdog end-to-end crash evidence were not supplied. Do not mark runtime integration or bypass closure complete.
+- Next: design/test staging-only root control lifecycle and independently managed recovery service, test concurrent launch/recovery and root/trusted process crash; review and close direct `systemd_jobs` bypass without altering production behavior.
