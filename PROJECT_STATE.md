@@ -652,3 +652,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Production operator and broker credential permission checks PASS (2026-11-07)
 - VPS verified operator verifier regular non-symlink `0600 hermes-trusted:hermes-trusted` (`OPERATOR_VERIFIER_PERMISSIONS=PASS`), broker signing key `0640 root:hermes-trusted` and 64-byte length (`BROKER_CREDENTIAL=PASS`), main service `active` (`MAIN_SERVICE=ACTIVE`).
 - Broker and operator credential provisioning completed. Next: install opt-in tmpfiles and service unit definitions in separate, controlled stages, verify without starting, then explicit runtime security checks before enablement. No service activation reported yet.
+
+
+## Production tmpfiles deployment PASS (2026-11-07)
+- User installed `/etc/tmpfiles.d/hermes-optional-runtime.conf` from the repository template and ran `systemd-tmpfiles --create`.
+- Verified `/run/hermes-broker` `0710 root:hermes-trusted`, `/run/hermes-operator` `0700 hermes-trusted:hermes-trusted`, optional broker and operator services inactive, main `hermes-agency.service` active; output `TMPFILES_DEPLOYMENT=PASS`.
+- Next: install and statically verify optional systemd unit files without starting or enabling them, then validate staged activation and negative access tests.
