@@ -4,6 +4,7 @@ Uses actual candidate entrypoint and trusted-UID client with private /run fixtur
 No production units, socket, journal, keys or databases are accessed.
 """
 import argparse
+import hashlib
 import hmac
 import json
 import os
