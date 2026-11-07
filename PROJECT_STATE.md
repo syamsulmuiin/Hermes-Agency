@@ -699,3 +699,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Production operator state/DB/key/verifier metadata: trusted-owned private dirs 0700, DB/verifier 0600; broker key 0640 root:hermes-trusted and 64 bytes. Unit uses `User=hermes-trusted`, `Group=hermes-trusted`.
 - Temporary `/run/systemd/system/hermes-operator-sidecar.service.d/90-startup-test.conf` sets `Restart=no`. Operator started successfully PID 995055, `ActiveState=active`, `SubState=running`, `NRestarts=0`; `/run/hermes-operator/operator.sock` 0600 hermes-trusted:hermes-trusted, listening. Broker and main service also active.
 - Next: verify operator socket rejects worker/root unauthorized protocol, then controlled valid authentication and signed-grant ledger acceptance. Keep both optional units disabled at boot, `Restart=no` until production acceptance.
+
+
+## Production worker-to-operator isolation (2026-11-07)
+- `runuser -u hermes-worker` direct connect to `/run/hermes-operator/operator.sock` returned `PermissionError`, `WORKER_OPERATOR_ACCESS_DENIED=PASS`; main, broker, and operator remained active.
+- Verified both private sockets reject worker, and broker rejects an unsigned trusted-UID payload. Next: protocol authentication negative tests and controlled signed-grant transaction/replay checks. Optional units remain disabled at boot and `Restart=no` runtime overrides remain in place.
