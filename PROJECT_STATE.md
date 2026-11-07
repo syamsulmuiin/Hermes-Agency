@@ -1002,3 +1002,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator ran at 08c81b6: `trusted_sqlite_lock_held_during_job=PASS`, `trusted_lock_held_until_stop_verified=PASS`, then sidecar raised `PermissionError: Invalid lease IPC framing` after expected clean broker EOF, so overall exit 1.
 - Commits 0b36d91 and ee91837 update IPC reader to recognize clean EOF only when explicitly allowed after signed grant admission, perform trusted cleanup, skip writing RELEASED to disconnected broker, and reject disconnect if no trusted cleanup callback. Partial/malformed frames remain rejected. Needs VPS rerun.
 - Still not fail-closed against trusted sidecar or supervisor death, or cleanup callback failure; independent systemd watchdog remains necessary. Production untouched.
+
+
+## Trusted IPC fourth VPS run: SyntaxError in EOF patch (2026-11-07)
+- Operator ran at 707c742 and hit `SyntaxError` in `agency/trusted_lease_ipc.py` line 29: literal backslash-n sequences were accidentally written instead of actual newlines; exit 1 before test assertions.
+- Commit cf6b56e fixes the syntax and implements clean EOF handling after authenticated grant, requires configured cleanup, executes cleanup while transaction is held, and skips RELEASED response on disconnected socket. Prior EOF handling patch was incomplete. Needs compile check and VPS rerun; not yet verified.
+- Still NOT fail-closed on trusted sidecar crash, root supervisor crash, or cleanup failure; do not wire production.
