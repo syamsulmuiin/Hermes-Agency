@@ -77,6 +77,44 @@ class TrustedLeaseIPCTests(unittest.TestCase):
             db.execute("DELETE FROM task_leases WHERE task_id=?", (self.task,))
             db.commit()
 
+    def test_nonroot_peer_rejected(self):
+        import os
+        a, b = socket.socketpair()
+        try:
+            with a, b:
+                with self.assertRaises(PermissionError):
+                    serve_fence_connection(
+                        a, self.dbpath, self.key,
+                        root_uid=os.getuid() + 1, now=100)
+        finally:
+            pass
+
+    def test_bad_completion_releases_lock(self):
+        import json
+        import os
+        a, b = socket.socketpair()
+        errors = []
+        def server():
+            with a:
+                try:
+                    serve_fence_connection(
+                        a, self.dbpath, self.key,
+                        root_uid=os.getuid(), now=100)
+                except Exception as exc:
+                    errors.append(exc)
+        thread = threading.Thread(target=server)
+        thread.start()
+        with b:
+            b.sendall((json.dumps({"grant": self.grant}) + "\n").encode())
+            self.assertIn(b"locked", b.recv(4096))
+            b.sendall(b'{"status":"done","grant_id":"wrong"}\n')
+        thread.join(timeout=3)
+        self.assertFalse(thread.is_alive())
+        self.assertIsInstance(errors[0], PermissionError)
+        with sqlite3.connect(self.dbpath, timeout=0.2) as db:
+            db.execute("DELETE FROM task_leases WHERE task_id=?", (self.task,))
+            db.commit()
+
     def test_revoked_lease_denied_before_job(self):
         self.store.db.execute("DELETE FROM task_leases WHERE task_id=?", (self.task,))
         self.store.db.commit()
