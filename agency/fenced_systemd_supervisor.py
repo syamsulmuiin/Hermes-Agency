@@ -55,7 +55,7 @@ def stop_and_verify_unit(unit, *, deadline_seconds=5):
     raise PermissionError("Fenced systemd unit still active or unverified")
 
 
-def supervised_fenced_unit(job, grant_id, fence_socket, runner):
+def supervised_fenced_unit(job, grant_id, fence_socket, runner, *, journal_path=None):
     """Broker-side lifecycle boundary for an opt-in fixed-unit runner.
 
     The runner must monitor fence EOF while systemd-run is in progress and
@@ -74,6 +74,9 @@ def supervised_fenced_unit(job, grant_id, fence_socket, runner):
         raise TypeError("Supervised unit runner required")
     unit = "hermes-fenced-" + hashlib.sha256(
         grant_id.encode("ascii")).hexdigest()[:32] + ".service"
+    if journal_path is not None:
+        from .fenced_unit_journal import register_before_launch
+        register_before_launch(journal_path, unit)
     try:
         result = runner(job, fence_socket, unit)
     except BaseException:
