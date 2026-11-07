@@ -10,7 +10,7 @@ import sys
 
 SCENARIOS = (
     ("unit", (sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"),
-     ("OK (skipped=1)",)),
+     ("OK",)),
     ("integrated_crash", (sys.executable, "-m", "agency.real_integrated_crash_suite_test", "--execute"),
      ("INTEGRATED_ISOLATED_CRASH_SUITE=PASS",)),
     ("staging_race", (sys.executable, "-m", "agency.real_staging_race_acceptance_test", "--execute"),
