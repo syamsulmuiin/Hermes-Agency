@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BROKER = ROOT / "deploy/systemd/hermes-fenced-broker-candidate.service"
 RECOVERY = ROOT / "deploy/systemd/hermes-fenced-recovery-candidate.service"
-PINNED = "/opt/hermes-fenced-21c9cad92cd5"
+PINNED = "/opt/hermes-fenced-9bf261261b59"
 
 def read(path):
     parser = configparser.ConfigParser(interpolation=None, strict=True)
