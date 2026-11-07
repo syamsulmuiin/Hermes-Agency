@@ -10,11 +10,16 @@ class BootstrapSafetyTests(unittest.TestCase):
             with self.assertRaises(PermissionError):
                 module.bootstrap()
 
+    def test_requires_exclusive_admission_drain(self):
+        with patch.object(module.os, 'geteuid', return_value=0):
+            with self.assertRaisesRegex(PermissionError, 'Exclusive admission drain'):
+                module.bootstrap()
+
     def test_requires_freeze_marker(self):
         with patch.object(module.os, "geteuid", return_value=0):
             with patch.object(module.os, "lstat", side_effect=FileNotFoundError):
                 with self.assertRaises(FileNotFoundError):
-                    module.bootstrap()
+                    module.bootstrap(admission_drained=True)
 
     def test_active_systemd_state_fails_closed(self):
         class Result:
