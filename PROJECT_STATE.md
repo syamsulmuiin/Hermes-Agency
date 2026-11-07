@@ -1420,3 +1420,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Actual systemd sandbox smoke test prepared (2026-11-07)
 - Added `agency.fenced_sandbox_smoke` (`93d60a7`): root-only explicit opt-in, random systemd transient unit using the candidate manifest's `WorkingDirectory`, `NoNewPrivileges`, `ProtectSystem`, `ReadWritePaths`, `ProtectHome`, `PrivateTmp` settings; imports fenced modules from pinned `/opt/hermes-fenced-*` and cleans only its own random unit. Does not open production signing key or trusted DB, bind broker sockets or install services.
 - Operator VPS result pending. This is an import/access sandbox smoke test, not complete real candidate manifest, grant or recovery proof. No cutover.
+
+## Sandbox smoke cleanup bug found and patched (2026-11-07)
+- Operator VPS: `CANDIDATE_ACTUAL_SANDBOX_IMPORTS=PASS`, `PRODUCTION_CUTOVER_EXECUTED=NO`, but smoke exit 1: `stop_and_verify_unit` rejected randomly named `hermes-sandbox-*` fixture (`Unsafe fenced unit identity`). Both production services remained active.
+- Fixed test-only unit prefix to allowlisted `hermes-fenced-` with 32 lowercase hex digits (`67359a4`); no change to supervisor security validation, production services or sandbox properties. VPS rerun pending; do not label complete sandbox smoke PASS yet.
