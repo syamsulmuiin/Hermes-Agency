@@ -1,0 +1,26 @@
+[Unit]
+Description=Hermes Agency signed-only root execution broker (opt-in)
+After=hermes-agency.service
+RequiresMountsFor=/var/lib/hermes-agency
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/hermes-agency
+ExecStart=/usr/bin/python3 -m agency.supervised_broker --socket /run/hermes-broker/broker.sock --trusted-user hermes-trusted --ledger /var/lib/hermes-broker/ledger.sqlite --trusted-db /var/lib/hermes-agency/agency.db --key /etc/hermes-broker/signing.key
+Restart=on-failure
+RestartSec=2
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/run/hermes-broker /var/lib/hermes-broker
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER CAP_SETGID CAP_SETUID
+LimitCORE=0
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
