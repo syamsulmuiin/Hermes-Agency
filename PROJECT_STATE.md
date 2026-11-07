@@ -1450,3 +1450,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Reviewed current `single_vps_service --forever` -> `service_lifecycle.serve_forever` -> `run_service` -> `serve_protected_once` -> `serve_cross_uid_once`: worker listener handles authenticated stage requests; does not call approved-job execution adapter. `TrustedAgentExecution.execute_operator_approved_job` -> `trusted_broker_adapter.execute_approved_job` -> `issue_broker_grant`/`submit_signed_grant` exists as a trusted-process-only hook but is not demonstrably wired to live operator-approved routing.
 - Added read-only `agency.fenced_caller_route_audit` (`5d72de6`) to verify source route and report fail-closed `PRODUCTION_FENCED_CALLER_ROUTE_VERIFIED=NO`. VPS execution pending.
 - Production cutover is NOT executed or authorized on this evidence; do not expose broker execution on worker socket or bypass operator authentication. Exact trusted operator ingress and service wiring require design/validation before operator-approved cutover.
+
+## VPS caller routing audit verified (2026-11-07)
+- Operator ran `agency.fenced_caller_route_audit`: `TRUSTED_APPROVED_JOB_ADAPTER_PRESENT=PASS`, `WORKER_SOCKET_BROKER_ROUTE_EXPOSED=NO`, `PRODUCTION_FENCED_CALLER_ROUTE_VERIFIED=NO`, `PRODUCTION_CUTOVER_AUTHORIZED=NO`, audit exit 0. Both production services active.
+- Exit 0 confirms correct audit execution, NOT that production routing works. Keep cutover blocked until a trusted-only operator ingress and full signed grant route are implemented and independently verified.
