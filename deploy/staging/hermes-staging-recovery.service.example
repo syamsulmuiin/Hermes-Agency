@@ -1,0 +1,20 @@
+# Staging-only recovery unit TEMPLATE. NOT INSTALLED OR ENABLED.
+# Must be paired with a separately supervised broker unit and OnFailure=
+# recovery trigger; do not apply to hermes-agency.service.
+[Unit]
+Description=Hermes isolated staging journal recovery
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+WorkingDirectory=/root/Hermes-Agency
+ExecStart=/usr/bin/python3 -m agency.fenced_staging_recovery --journal /run/hermes-staging/owned.sqlite --execute
+NoNewPrivileges=yes
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=/run/hermes-staging
+PrivateTmp=yes
+TimeoutStartSec=30
