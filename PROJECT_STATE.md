@@ -480,3 +480,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added `agency/broker_unit_audit.py` and 2 tests: checks exact opt-in production example's security-critical unit directives, bounded writable paths and signed-only entrypoint; negative test rejects weakened ProtectSystem. Expected suite 196 tests, VPS pending.
 - This is STATIC configuration verification, NOT systemd execution with the production unit. A systemd-analyze verify and live test of production-equivalent hardening are still required.
 - No live trusted service code or worker protocol changed. Operator-only live service integration and pre-rotation unused grant rejection are NOT yet implemented or proven. Do not activate production broker.
+
+## Broker production hardening iteration (2026-11-07)
+- Hardened opt-in `deploy/hermes-signed-broker.service.example` with kernel, control group, device, SUID/SGID, personality, realtime and syscall architecture restrictions. Updated static audit to require all new directives.
+- VPS verification and production-equivalent runtime acceptance are pending. The existing transient acceptance harness does not use this unit's full hardening and cannot certify compatibility.
+- Unused pre-rotation grant rejection test and authenticated integration into the running trusted service are still pending; isolated acceptance's self-issued operator credential is NOT a substitute for a real authenticated operator.
+- No live service restart, broker deployment, or worker privilege changes performed.
