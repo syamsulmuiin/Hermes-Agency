@@ -133,6 +133,11 @@ def dispatch_operator(boundary, request, verifier, broker_key_path, broker_socke
                   else freeze_marker)
         if os.path.lexists(freeze):
             raise PermissionError("Operator admission frozen for maintenance")
+        # Reject invalid candidate configuration before consuming approval.
+        if (request["action"] == "approve_and_execute"
+                and broker_socket_path == "/run/hermes-broker/fenced-candidate.sock"
+                and broker_key_path != "/etc/hermes-broker/signing.key"):
+            raise PermissionError("Candidate requires pinned broker signing key")
         boundary.approve_operator_request(
             request["approval_id"], bytes.fromhex(request["operator_secret_hex"]),
             operator_identity, salt, proof,
@@ -141,8 +146,6 @@ def dispatch_operator(boundary, request, verifier, broker_key_path, broker_socke
             # Candidate routing is deployment-controlled, never request-controlled.
             # Reuse the admission lease already covering approval and execution.
             if broker_socket_path == "/run/hermes-broker/fenced-candidate.sock":
-                if broker_key_path != "/etc/hermes-broker/signing.key":
-                    raise PermissionError("Candidate requires pinned broker signing key")
                 return boundary.execute_operator_approved_job(
                     request["approval_id"], request["task_id"], request["job"],
                     request["worker_credential"], request["lease_token"],
