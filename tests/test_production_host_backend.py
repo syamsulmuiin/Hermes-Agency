@@ -89,7 +89,7 @@ class IsolatedHostTests(unittest.TestCase):
     def test_readiness_requires_independent_live_attestation(self):
         all_true = {key: True for key in REQUIRED}
         self.assertEqual(evaluate(all_true).status, 'NO_GO')
-        self.assertEqual(evaluate(all_true, production_attested=True).status, 'GO')
+        self.assertEqual(evaluate(all_true, production_attested=True).status, 'EVIDENCE_COMPLETE_NOT_AUTHORIZED')
         for key in REQUIRED:
             with self.subTest(key=key):
                 evidence = dict(all_true)
