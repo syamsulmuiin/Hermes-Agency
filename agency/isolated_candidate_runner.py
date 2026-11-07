@@ -10,7 +10,10 @@ from .real_systemd_crash_acceptance import launch, await_active
 def _runner(job, fence, unit):
     if job != "identity":
         return run_fenced_systemd_unit(job, fence, unit)
-    if not os.path.isfile("/run/hermes-staging/allow-hold-test"):
+    marker = os.environ.get("HERMES_ISOLATED_HOLD_MARKER", "")
+    if (not marker.startswith("/run/hermes-staging/")
+            or os.path.normpath(marker) != marker
+            or not os.path.isfile(marker)):
         raise PermissionError("Isolated hold test marker absent")
     launch(unit)
     await_active(unit)
