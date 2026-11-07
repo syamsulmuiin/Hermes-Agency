@@ -53,7 +53,7 @@ LEDGER="$BASE/ledger/ledger.sqlite"
 # The test-only unit is started by systemd-run, not by a shell background job.
 systemd-run --system --unit="$UNIT" --collect \
   --property=Type=exec --property=NoNewPrivileges=yes \
-  --property=ProtectHome=yes --property=ProtectSystem=strict \
+  --property=ProtectHome=no --property=ProtectSystem=strict \
   --property="ReadWritePaths=$BASE" \
   --property=PrivateTmp=no --property=RestrictAddressFamilies=AF_UNIX \
   /usr/bin/python3 -m agency.supervised_broker \
