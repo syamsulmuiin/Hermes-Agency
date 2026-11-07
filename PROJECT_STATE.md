@@ -1330,3 +1330,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Isolated persistent broker E2E runner (2026-11-07)
 - Added `agency/isolated_candidate_acceptance.py` (explicit `--execute`) and isolated-only long-running runner. Uses per-run `/run/hermes-staging/candidate-*` fixture with random systemd service names, socket, root ledger, journal, signing key and non-root trusted DB. Tests real candidate service, signed `noop`, replay denial, active `identity` hold, trusted SQLite lock, broker SIGKILL, pending gate, PID1 recovery and restart; verifies active production services at the end. Test-only hold marker is scoped to the fixture and passed by systemd environment. Commits `8b30d0a`, `8503aca`, `aec41ae`, `9aff749`, `7ada5dd`.
 - This new runner has NOT YET BEEN EXECUTED on VPS. Any failed assertion must be treated as failure, not an assumed pass. It does not activate production candidate or authorize cutover. Candidate sandbox parity and cleanup/error cases still require review after first execution.
+
+## First isolated candidate runtime failure and fix (2026-11-07)
+- VPS test showed `CANDIDATE_SYSTEMD_SOCKET=PASS` but first grant rejected (`PermissionError`), exit 1; both production services remained active.
+- Found acceptance fixture grant expiry `iat+120`, violating verifier hard limit `exp-iat <= 60`. Changed fixture TTL to 60 seconds in commit `5bf20ca`, without relaxing grant validation. Must rerun to establish whether any further issues remain.
