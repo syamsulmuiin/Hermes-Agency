@@ -88,7 +88,7 @@ def serve_candidate(path, uid, gid, ledger, journal, trusted_db, key_path, *,
                         verify_broker_grant(grant, key)
                         result = session(grant, key, journal, trusted_db,
                                          trusted_uid=uid, trusted_gid=gid,
-                                         ledger=ledger)
+                                         ledger=ledger, production_candidate=True)
                         conn.sendall((json.dumps(result) + "\n").encode())
                     except (PermissionError, ValueError, OSError) as exc:
                         print(json.dumps({"fenced_broker": "denied",
