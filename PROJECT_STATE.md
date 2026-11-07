@@ -880,3 +880,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Commit 8c4643e: optional journal_path in supervised_fenced_unit; records ownership before invoking runner. Production broker path does not yet supply journal_path.
 - Commit 3055edc: four isolated journal tests added (prelaunch persistence, crash-before-launch record, recovery failure stays pending, invalid unit rejection). NOT YET VERIFIED ON VPS.
 - Remaining: integrate journal recovery into independent CLI and startup gate, enforce single-broker systemd orchestration, test actual kill -9 while real transient unit runs, and resolve fence lock release race before production noop acceptance. Journal tests mock filesystem ownership checks and systemd controls; they do not prove actual crash safety.
+
+
+## Durable ownership regression verified on VPS (2026-11-07)
+- Operator pulled development/foundation to 8092869 and ran eleven unittest modules including fenced_unit_journal and all ten prior suites.
+- Result: 50 tests in 1.116s, OK, TEST_EXIT_CODE=0. All four new journal tests passed: prelaunch persistence, pending recovery after simulated crash-before-launch, failure remains pending, invalid unit denied.
+- Journal tests mock filesystem ownership verification and unit stop; no real broker SIGKILL, independent systemd recovery service, or transient unit was exercised. Production remains unchanged; recovery CLI integration, startup gate and crash safety remain pending.
