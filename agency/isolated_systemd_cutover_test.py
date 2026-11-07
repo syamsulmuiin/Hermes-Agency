@@ -4,11 +4,21 @@ Only fixed transient test units with a dedicated prefix are controlled.
 No production broker, operator, socket, database or ledger is accessed.
 """
 import contextlib
+import hashlib
+import hmac
+import secrets
+import sqlite3
+import tempfile
 import os
 import subprocess
 import time
 
 from .production_cutover_controller import cutover, CutoverError
+from .broker_grants import _canonical
+from .security import fingerprint
+from .systemd_broker import initialize_ledger, execute_signed_grant
+from .fenced_unit_journal import recover_owned_units
+from .fenced_startup_gate import require_recovered
 
 PREFIX = "hermes-cutover-e2e-"
 OLD = PREFIX + "legacy.service"
@@ -53,8 +63,12 @@ def _start(unit):
 
 
 class IsolatedSystemdAdapter:
-    def __init__(self, failure=None):
+    def __init__(self, failure=None, *, ledger=None, journal=None):
         self.failure = failure
+        self.ledger = ledger
+        self.journal = journal
+        self.grant_id = secrets.token_hex(32)
+        self.key = secrets.token_bytes(32)
         self.frozen = False
         self.route = "legacy"
         self.consumed = set()
@@ -90,6 +104,7 @@ class IsolatedSystemdAdapter:
         self._inject("stop_old")
 
     def bootstrap(self):
+        require_recovered(self.journal)
         self._inject("bootstrap")
 
     def start_new(self):
@@ -102,11 +117,29 @@ class IsolatedSystemdAdapter:
 
     def replay_probe(self):
         self._inject("replay_probe")
-        # Local protocol fixture only. Real SQLite replay acceptance remains
-        # a separate mandatory test and is NOT claimed here.
-        self.consumed.add("fixture")
-        if "fixture" not in self.consumed:
-            raise RuntimeError("Fixture replay invariant broken")
+        now = time.time()
+        claims = {"v": 1, "aud": "hermes-systemd-broker-v1",
+                  "id": self.grant_id, "approval": "isolated-approval",
+                  "task": "isolated-task", "worker": "isolated-worker",
+                  "lease_generation": 1, "job": "noop",
+                  "params_hash": fingerprint({"job": "noop"}),
+                  "iat": now, "exp": now + 45}
+        envelope = {"claims": claims, "signature":
+                    hmac.new(self.key, _canonical(claims), hashlib.sha256).hexdigest()}
+        result = execute_signed_grant(
+            self.ledger, envelope, self.key, executor=lambda job: {"job": job})
+        if result != {"job": "noop"}:
+            raise AssertionError("Signed grant did not execute")
+        self.consumed.add(self.grant_id)
+        try:
+            execute_signed_grant(
+                self.ledger, envelope, self.key,
+                executor=lambda job: (_ for _ in ()).throw(
+                    AssertionError("Replay executed")))
+        except PermissionError:
+            pass
+        else:
+            raise AssertionError("Durable signed grant replay accepted")
 
     def health(self):
         self._inject("health")
@@ -120,6 +153,7 @@ class IsolatedSystemdAdapter:
         if not _active(OLD):
             _start(OLD)
         self.route = "legacy"
+        require_recovered(self.journal)
 
     def unfreeze(self):
         self._inject("unfreeze")
@@ -137,7 +171,21 @@ def run():
     for failure in (None, "start_new", "route_new", "health", "unfreeze"):
         _stop(OLD)
         _stop(NEW)
-        adapter = IsolatedSystemdAdapter(failure=failure)
+        with tempfile.TemporaryDirectory(prefix="hermes-cutover-ledger-") as fixture_dir:
+            ledger = os.path.join(fixture_dir, "ledger.sqlite")
+            journal = os.path.join(fixture_dir, "owned.sqlite")
+            initialize_ledger(ledger)
+            recover_owned_units(journal)
+            adapter = IsolatedSystemdAdapter(
+                failure=failure, ledger=ledger, journal=journal)
+            _run_case(adapter, failure, ledger, journal)
+    print("ISOLATED_SYSTEMD_CUTOVER_E2E=PASS", flush=True)
+    print("REAL_SQLITE_REPLAY_LEDGER_TESTED=YES", flush=True)
+    print("REAL_BROKER_PROTOCOL_TESTED=NO", flush=True)
+    print("PRODUCTION_CUTOVER_AUTHORIZED=NO", flush=True)
+
+
+def _run_case(adapter, failure, ledger, journal):
         try:
             _start(OLD)
             try:
@@ -159,14 +207,21 @@ def run():
                         raise AssertionError("Rollback did not restore isolated legacy unit")
                     if adapter.frozen:
                         raise AssertionError("Admission remained frozen after verified rollback")
+            with sqlite3.connect(ledger) as db:
+                try:
+                    rows = db.execute(
+                        "SELECT grant_id,status FROM signed_grant_consumptions").fetchall()
+                except sqlite3.OperationalError:
+                    rows = []
+            expected = [(adapter.grant_id, "completed")] if adapter.consumed else []
+            if rows != expected:
+                raise AssertionError("Replay ledger changed across handover/rollback")
+            require_recovered(journal)
             print("ISOLATED_SYSTEMD_CUTOVER_" +
                   ("SUCCESS" if failure is None else failure.upper()) + "=PASS", flush=True)
         finally:
             _stop(NEW)
             _stop(OLD)
-    print("ISOLATED_SYSTEMD_CUTOVER_E2E=PASS", flush=True)
-    print("REAL_BROKER_PROTOCOL_TESTED=NO", flush=True)
-    print("PRODUCTION_CUTOVER_AUTHORIZED=NO", flush=True)
 
 
 def main(argv=None):
