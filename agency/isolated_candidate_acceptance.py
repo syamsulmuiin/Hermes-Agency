@@ -214,13 +214,6 @@ def run(*, deployed=None):
                                              + " " + repr(values))
                 print("CANDIDATE_EFFECTIVE_SYSTEMD_SANDBOX=PASS", flush=True)
 
-            # Actual sidecar IPC path: root operator -> trusted nonroot
-            # sidecar -> fenced broker. All fixtures remain disposable.
-            if deployed is not None:
-                from .isolated_sidecar_rehearsal import run_sidecar_rehearsal
-                run_sidecar_rehearsal(folder, dbpath, keypath, sock,
-                                     identity, repo)
-
             # SO_PEERCRED requires the dedicated nonroot UID. Fork and drop
             # privileges in a child; never weaken candidate peer checking.
             def request(grant):
@@ -256,52 +249,89 @@ def run(*, deployed=None):
             if request(g1)[0] == 0:
                 raise AssertionError("Consumed grant replay succeeded")
             print("CANDIDATE_REPLAY_DENIED=PASS", flush=True)
-            pid = os.fork()
-            if pid == 0:
+            def crash_and_recover(unit, sidecar_origin=False):
+                contender = sqlite3.connect(dbpath, timeout=.2, isolation_level=None)
                 try:
-                    os.setgroups([])
-                    os.setgid(identity.pw_gid)
-                    os.setuid(identity.pw_uid)
-                    submit_signed_grant(sock, g2)
-                except BaseException:
-                    pass
-                os._exit(0)
-            unit = unit_for_grant(c2["id"])
-            if not until(lambda: active(unit), 15):
-                print("CANDIDATE_HOLD_UNIT=" + unit, flush=True)
-                print("CANDIDATE_HOLD_UNIT_STATUS=" + ctl("status", unit, "--no-pager", "-l").stdout.decode("utf-8", "replace")[-3500:], flush=True)
-                print("CANDIDATE_HOLD_BROKER_STATUS=" + ctl("status", broker_unit, "--no-pager", "-l").stdout.decode("utf-8", "replace")[-4500:], flush=True)
-                print("CANDIDATE_HOLD_JOURNAL=" + repr(sqlite3.connect(journal).execute("SELECT unit,state FROM owned_units").fetchall()), flush=True)
-                print("CANDIDATE_HOLD_LEDGER=" + repr(sqlite3.connect(ledger).execute("SELECT grant_id,status FROM signed_grant_consumptions").fetchall()), flush=True)
-                raise AssertionError("Hold unit never became active")
-            contender = sqlite3.connect(dbpath, timeout=.2, isolation_level=None)
-            try:
-                try:
-                    contender.execute("BEGIN IMMEDIATE")
-                except sqlite3.OperationalError:
-                    print("CANDIDATE_TRUSTED_LEASE_LOCKED=PASS", flush=True)
-                else:
-                    contender.rollback()
-                    raise AssertionError("Trusted lease was not locked")
-            finally:
-                contender.close()
-            mainpid = int(ctl("show", broker_unit, "--property=MainPID",
-                              "--value").stdout.strip())
-            if mainpid <= 1:
-                raise AssertionError("Invalid candidate PID")
-            os.kill(mainpid, signal.SIGKILL)
-            if not gate_denied(journal):
-                raise AssertionError("Pending gate opened after SIGKILL")
-            print("CANDIDATE_SIGKILL_PENDING_GATE=PASS", flush=True)
-            if not until(lambda: not active(unit) and not gate_denied(journal), 25):
-                raise AssertionError("Independent candidate recovery not verified")
-            print("CANDIDATE_SYSTEMD_RECOVERY=PASS", flush=True)
-            if ctl("start", broker_unit).returncode:
-                raise AssertionError("Candidate restart after recovery failed")
-            if not until(lambda: os.path.exists(sock), 10):
-                raise AssertionError("Candidate restart socket absent")
-            print("CANDIDATE_RESTART_AFTER_RECOVERY=PASS", flush=True)
-            print("PERSISTENT_CANDIDATE_ISOLATED_E2E=PASS", flush=True)
+                    try:
+                        contender.execute("BEGIN IMMEDIATE")
+                    except sqlite3.OperationalError:
+                        print("CANDIDATE_TRUSTED_LEASE_LOCKED=PASS", flush=True)
+                    else:
+                        contender.rollback()
+                        raise AssertionError("Trusted lease was not locked")
+                finally:
+                    contender.close()
+                mainpid = int(ctl("show", broker_unit, "--property=MainPID",
+                                  "--value").stdout.strip())
+                if mainpid <= 1:
+                    raise AssertionError("Invalid candidate PID")
+                os.kill(mainpid, signal.SIGKILL)
+                if not gate_denied(journal):
+                    raise AssertionError("Pending gate opened after SIGKILL")
+                print("CANDIDATE_SIGKILL_PENDING_GATE=PASS", flush=True)
+                if not until(lambda: not active(unit) and not gate_denied(journal), 25):
+                    raise AssertionError("Independent candidate recovery not verified")
+                print("CANDIDATE_SYSTEMD_RECOVERY=PASS", flush=True)
+                if ctl("start", broker_unit).returncode:
+                    raise AssertionError("Candidate restart after recovery failed")
+                if not until(lambda: os.path.exists(sock), 10):
+                    raise AssertionError("Candidate restart socket absent")
+                print("CANDIDATE_RESTART_AFTER_RECOVERY=PASS", flush=True)
+                if sidecar_origin:
+                    print("SIDECAR_HOLD_SIGKILL_RECOVERY=PASS", flush=True)
+            # Pinned candidate: the held job must originate from the real
+            # operator IPC, not a separately pre-signed direct broker grant.
+            if deployed is not None:
+                def sidecar_hold(operator_socket, hold_request):
+                    child = os.fork()
+                    if child == 0:
+                        try:
+                            from .isolated_operator_ipc import request_operator
+                            request_operator(operator_socket, hold_request)
+                        except BaseException:
+                            pass  # SIGKILL intentionally interrupts this IPC.
+                        os._exit(0)
+                    sidecar_children.append(child)
+                    print("SIDECAR_HOLD_REQUEST_SUBMITTED=PASS", flush=True)
+
+                from .isolated_sidecar_rehearsal import run_sidecar_rehearsal
+                sidecar_children = []
+                # Crash and recovery are executed while the real sidecar is
+                # still serving the hold request, via callback below.
+                # Unit identity derives from the signed grant ID, NOT task ID.
+                # Resolve the running unit by its staging journal instead.
+                def sidecar_crash(operator_socket, hold_request):
+                    sidecar_hold(operator_socket, hold_request)
+                    if not until(lambda: bool(sqlite3.connect(journal).execute(
+                            "SELECT unit FROM owned_units").fetchall()), 15):
+                        raise AssertionError("Sidecar hold not journaled")
+                    with sqlite3.connect(journal) as connection:
+                        rows = connection.execute("SELECT unit FROM owned_units").fetchall()
+                    if len(rows) != 1:
+                        raise AssertionError("Unexpected sidecar-owned unit count")
+                    crash_and_recover(rows[0][0], sidecar_origin=True)
+                run_sidecar_rehearsal(folder, dbpath, keypath, sock,
+                                     identity, repo, hold_callback=sidecar_crash)
+            else:
+                pid = os.fork()
+                if pid == 0:
+                    try:
+                        os.setgroups([])
+                        os.setgid(identity.pw_gid)
+                        os.setuid(identity.pw_uid)
+                        submit_signed_grant(sock, g2)
+                    except BaseException:
+                        pass
+                    os._exit(0)
+                unit = unit_for_grant(c2["id"])
+                if not until(lambda: active(unit), 15):
+                    print("CANDIDATE_HOLD_UNIT=" + unit, flush=True)
+                    print("CANDIDATE_HOLD_UNIT_STATUS=" + ctl("status", unit, "--no-pager", "-l").stdout.decode("utf-8", "replace")[-3500:], flush=True)
+                    print("CANDIDATE_HOLD_BROKER_STATUS=" + ctl("status", broker_unit, "--no-pager", "-l").stdout.decode("utf-8", "replace")[-4500:], flush=True)
+                    print("CANDIDATE_HOLD_JOURNAL=" + repr(sqlite3.connect(journal).execute("SELECT unit,state FROM owned_units").fetchall()), flush=True)
+                    print("CANDIDATE_HOLD_LEDGER=" + repr(sqlite3.connect(ledger).execute("SELECT grant_id,status FROM signed_grant_consumptions").fetchall()), flush=True)
+                    raise AssertionError("Hold unit never became active")
+                    crash_and_recover(unit)\n            print("PERSISTENT_CANDIDATE_ISOLATED_E2E=PASS", flush=True)
         finally:
             ctl("stop", broker_unit)
             if os.path.isfile(journal):
