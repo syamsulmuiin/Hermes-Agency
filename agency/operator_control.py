@@ -144,11 +144,9 @@ def serve_operator_forever(path, boundary_factory, verifier, broker_key_path,
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     inode = None
     try:
-        old_umask = os.umask(0o177)
-        try:
-            listener.bind(path)
-        finally:
-            os.umask(old_umask)
+        # Parent is trusted-UID-owned 0700; avoid process-wide umask in a
+        # multithreaded trusted service. Restrict socket to 0600 immediately.
+        listener.bind(path)
         inode = os.lstat(path).st_ino
         os.chmod(path, 0o600)
         listener.listen(4)
