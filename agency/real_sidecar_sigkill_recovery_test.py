@@ -52,6 +52,7 @@ def run():
         journal = folder + "/owned.sqlite"
         database = folder + "/trusted.sqlite"
         ready = folder + "/ready"
+        pidfile = folder + "/sidecar.pid"
         worker = folder + "/watch.py"
         recover = folder + "/recover.py"
         repo = os.path.dirname(os.path.dirname(__file__))
@@ -106,6 +107,8 @@ def run():
             if not os.path.isfile(ready):
                 raise RuntimeError("Watcher not ready")
             child.start()
+            with open(pidfile,"x",encoding="ascii") as f:
+                f.write(str(child.pid))
             peer.close()
             from .trusted_lease_ipc import _send,_read_line
             parent.settimeout(8)
@@ -131,8 +134,6 @@ def run():
                 print("real_sidecar_sigkill_pending_gate=PASS",flush=True)
             else:
                 raise AssertionError("Unlocked lease bypassed pending journal")
-            if ctl("kill","--signal=SIGKILL","--kill-who=main",watched).returncode:
-                raise RuntimeError("Failed to trigger independent recovery")
             deadline=time.monotonic()+15
             while time.monotonic()<deadline:
                 with sqlite3.connect(journal) as db:
