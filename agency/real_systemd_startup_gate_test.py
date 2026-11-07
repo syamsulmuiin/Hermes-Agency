@@ -35,7 +35,7 @@ def exercise():
             raise RuntimeError("Test service collision")
         unit = ("[Unit]\nDescription=Hermes isolated startup gate acceptance\n"
                 "[Service]\nType=oneshot\n"
-                "ExecStartPre=" + gate + "\n"
+                "ExecStartPre=/bin/sh " + gate + "\n"
                 "ExecStart=/usr/bin/touch " + marker + "\n")
         try:
             with open(path, "x", encoding="utf-8") as file:
@@ -46,6 +46,13 @@ def exercise():
             result = run("/usr/bin/systemctl", "start", name + ".service")
             if result.returncode == 0 or os.path.exists(marker):
                 raise AssertionError("ExecStart executed despite failing gate")
+            failure_status = run("/usr/bin/systemctl", "show", name + ".service",
+                                 "--property=ExecMainStatus", "--property=Result")
+            if failure_status.returncode:
+                raise RuntimeError("Could not inspect failed test unit")
+            failure_detail = run("/usr/bin/systemctl", "status", "--no-pager", "--full", name + ".service")
+            if b"status=203/EXEC" in failure_detail.stdout:
+                raise RuntimeError("Gate did not execute: systemd reported 203/EXEC")
             print("real_execstartpre_failure_blocks_execstart=PASS", flush=True)
             # Allow gate to succeed, then confirm only test service starts.
             with open(gate, "w", encoding="ascii") as file:
