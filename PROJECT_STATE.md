@@ -1049,3 +1049,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Actual root supervisor SIGKILL candidate uploaded (2026-11-07)
 - Added `agency/real_supervisor_failure_test.py` to `development/foundation`, latest code commit `3bf6c83`. Isolated real non-root trusted IPC sidecar, separate root supervisor, random real transient systemd unit, pending root-owned ownership journal, independent systemd PID watcher and OnFailure recovery. On broker EOF, root supervisor receives actual cleanup request; test SIGKILLs root supervisor, asserts journal gate remains closed, measures SQLite unlock and recovery, then requires stop/verify and verified journal. Closed inherited broker peer socket in root supervisor so EOF is observable.
 - This is an unverified VPS test candidate; do not claim PASS or production safety. The test intentionally injects supervisor failure before it can stop the unit; cleanup-failure and restart acceptance still need dedicated coverage. No production changes.
+
+
+## Actual root supervisor SIGKILL VPS PASS (2026-11-07)
+- Operator VPS: `COMPILE_EXIT_CODE=0`, `real_supervisor_sigkill_pending_gate_before_crash=PASS`, `real_supervisor_sigkill_pending_gate_after_crash=PASS`, `real_supervisor_sigkill_sqlite_unlock_delay_ms=54`, `real_supervisor_sigkill_recovery_delay_ms=123`, `real_supervisor_sigkill_independent_recovery=PASS`, `REAL_SUPERVISOR_EXIT_CODE=0`.
+- Trusted non-root sidecar raised `PermissionError: Supervisor failed before verification` intentionally when actual root supervisor was SIGKILLed. Independent systemd OnFailure recovery stopped and verified isolated unit; journal then verified. SQLite unlock preceded recovery. Timing is from one VPS run, not SLA.
+- Remaining: separately injected cleanup failure (not supervisor SIGKILL), actual service restart and gate enforcement across all launch paths, production watchdog design and wiring. No production changes.
