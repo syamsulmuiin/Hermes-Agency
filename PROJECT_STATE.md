@@ -1416,3 +1416,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator ran from `/opt/hermes-fenced-377abe8b948b` (pinned `377abe8b948b1857a5f1d5c3cfad7379d3a1a713`). `agency.isolated_candidate_acceptance --execute` PASS: signed grant, replay denial, trusted SQLite lease, SIGKILL pending gate, independent systemd recovery and restart; exit 0.
 - `agency.real_midflight_runner_crash_acceptance --execute` PASS: real fenced runner with test-only in-memory sleep override, SIGKILL while transient unit active, gate denied pending, recovery and gate reopened; exit 0.
 - Both live services remained active. This does not validate the exact candidate manifest's `ProtectSystem=strict`, `ProtectHome=yes`, `ReadWritePaths` or production caller routing; cutover remains blocked until actual sandbox manifest test and operator-approved rollback.
+
+## Actual systemd sandbox smoke test prepared (2026-11-07)
+- Added `agency.fenced_sandbox_smoke` (`93d60a7`): root-only explicit opt-in, random systemd transient unit using the candidate manifest's `WorkingDirectory`, `NoNewPrivileges`, `ProtectSystem`, `ReadWritePaths`, `ProtectHome`, `PrivateTmp` settings; imports fenced modules from pinned `/opt/hermes-fenced-*` and cleans only its own random unit. Does not open production signing key or trusted DB, bind broker sockets or install services.
+- Operator VPS result pending. This is an import/access sandbox smoke test, not complete real candidate manifest, grant or recovery proof. No cutover.
