@@ -1044,3 +1044,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Actual non-root sidecar SIGKILL acceptance returned `real_sidecar_sigkill_sqlite_unlock_delay_ms=2`, `real_sidecar_sigkill_pending_gate=PASS`, `real_sidecar_sigkill_systemd_recovery_delay_ms=122`, `real_sidecar_sigkill_independent_recovery=PASS`, `REAL_SIDECAR_EXIT_CODE=0`.
 - Verified in isolated test: SQLite writer lock releases before job stop, but pending ownership journal blocks startup; independent PID watcher/systemd OnFailure recovers the real transient job and verifies journal. These timings are from one VPS run, not a latency SLA.
 - Remaining real-component acceptance: actual root supervisor SIGKILL, real IPC cleanup failure, real service restart and gate serialization, and eventual production watchdog wiring. No production changes.
+
+
+## Actual root supervisor SIGKILL candidate uploaded (2026-11-07)
+- Added `agency/real_supervisor_failure_test.py` to `development/foundation`, latest code commit `3bf6c83`. Isolated real non-root trusted IPC sidecar, separate root supervisor, random real transient systemd unit, pending root-owned ownership journal, independent systemd PID watcher and OnFailure recovery. On broker EOF, root supervisor receives actual cleanup request; test SIGKILLs root supervisor, asserts journal gate remains closed, measures SQLite unlock and recovery, then requires stop/verify and verified journal. Closed inherited broker peer socket in root supervisor so EOF is observable.
+- This is an unverified VPS test candidate; do not claim PASS or production safety. The test intentionally injects supervisor failure before it can stop the unit; cleanup-failure and restart acceptance still need dedicated coverage. No production changes.
