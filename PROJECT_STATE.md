@@ -976,3 +976,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation at 1411e79 and ran `python3 -m agency.real_systemd_auto_recovery_test --execute`.
 - Output: `auto_recovery_pending_gate=PASS`, `systemd_onfailure_automatic_recovery=PASS`, `AUTO_RECOVERY_EXIT_CODE=0`.
 - Isolated broker/recovery test services and private journal demonstrated automatic systemd OnFailure recovery of transient unit after SIGKILL; journal becomes verified and gate permits startup. No manual recovery invocation. This does NOT prove real trusted UID lease IPC lifetime coupling, stop-before-lock-release, or production service orchestration. Production unchanged.
+
+
+## Trusted lease stop-before-release integration started (2026-11-07)
+- Commit 85aea21 adds optional `cleanup_before_release(claims)` to `serve_fence_connection`, invoked in a `finally` block while `fenced_lease` transaction is still held, for both DONE and unexpected disconnect. Callback is operator-wired; client cannot provide a unit name.
+- CRITICAL LIMITATION: if cleanup raises, `fenced_lease` context still releases SQLite lock while unwinding. This is NOT fail-closed on cleanup failure, trusted sidecar SIGKILL, or process crash. Must implement robust independent lifecycle containment and tests before production activation. No real trusted UID/SQLite/systemd end-to-end acceptance has been run. No production wiring.
