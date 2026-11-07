@@ -8,6 +8,7 @@ import pwd
 import secrets
 import signal
 import time
+import traceback
 
 from .isolated_operator_ipc import request_operator
 
@@ -133,7 +134,12 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo)
             os.umask(0o077)
             sidecar_main(args)
         except BaseException as exc:
-            # Never log secrets, paths, or raw exception arguments.
+            # Print only exception type and traceback locations, never values,
+            # secrets, arguments or raw exception messages.
+            frames = traceback.extract_tb(exc.__traceback__)
+            locations = ",".join(f.name + ":" + str(f.lineno) for f in frames[-6:])
+            detail = type(exc).__name__ + " at " + locations
+            print("ISOLATED_SIDECAR_CHILD_ERROR=" + detail, flush=True)
             os.write(error_write, type(exc).__name__.encode("ascii", "replace")[:100])
         os._exit(1)
     os.close(error_write)
