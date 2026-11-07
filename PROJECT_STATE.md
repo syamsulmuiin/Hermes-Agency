@@ -943,3 +943,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Real startup gate failure diagnosed: 203/EXEC (2026-11-07)
 - VPS diagnostic rerun exited 1. systemd status: `ExecStartPre=/run/hermes-gate-.../gate (code=exited, status=203/EXEC)`; test's earlier `real_execstartpre_failure_blocks_execstart=PASS` was a false-positive for intended gate logic (only verified ExecStart did not run). Exact 203/EXEC cause unconfirmed; /run execution restrictions possible.
 - Commit b32a18c invokes gate as `/bin/sh <private-test-script>` and rejects 203/EXEC explicitly. Pending VPS retest; not yet PASS. Production untouched.
+
+
+## Real systemd ExecStartPre acceptance VPS PASS (2026-11-07)
+- Operator pulled development/foundation at fada2f4 and ran `python3 -m agency.real_systemd_startup_gate_test --execute`.
+- Output: `real_execstartpre_failure_blocks_execstart=PASS`, `real_execstartpre_success_allows_execstart=PASS`, `STARTUP_GATE_EXIT_CODE=0`.
+- Confirms isolated real systemd ExecStartPre script failure blocks ExecStart, and success permits ExecStart. Does NOT yet test journal-backed gate, actual trusted lease IPC or automatic recovery after crash. Production service unchanged.
