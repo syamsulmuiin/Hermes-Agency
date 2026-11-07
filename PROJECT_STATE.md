@@ -704,3 +704,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Production worker-to-operator isolation (2026-11-07)
 - `runuser -u hermes-worker` direct connect to `/run/hermes-operator/operator.sock` returned `PermissionError`, `WORKER_OPERATOR_ACCESS_DENIED=PASS`; main, broker, and operator remained active.
 - Verified both private sockets reject worker, and broker rejects an unsigned trusted-UID payload. Next: protocol authentication negative tests and controlled signed-grant transaction/replay checks. Optional units remain disabled at boot and `Restart=no` runtime overrides remain in place.
+
+
+## Production operator invalid-credential denial (2026-11-07)
+- Root client sent `approve` request to operator socket with nonexistent approval ID and all-zero 64-hex secret. Operator returned `{"status":"denied"}`, `INVALID_CREDENTIAL_REJECTED=PASS`. Main, broker, and operator remained active.
+- This is one negative authentication test, not proof of valid credential acceptance or signed-grant execution. Next: review fixed job allowlist and grant issuance before selecting harmless production acceptance test. No auto-enable yet.
