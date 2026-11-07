@@ -28,7 +28,7 @@ class ReadinessResult:
 
 
 def evaluate(evidence, *, production_attested=False):
-    """Do not promote isolated/simulated results to production GO."""
+    """Evidence completeness only; even complete evidence is not cutover approval."""
     blockers = []
     if not isinstance(evidence, dict):
         evidence = {}
@@ -37,7 +37,7 @@ def evaluate(evidence, *, production_attested=False):
             blockers.append(name)
     if production_attested is not True:
         blockers.append("independent_live_production_attestation_missing")
-    return ReadinessResult("GO" if not blockers else "NO_GO", tuple(blockers))
+    return ReadinessResult("EVIDENCE_COMPLETE_NOT_AUTHORIZED" if not blockers else "NO_GO", tuple(blockers))
 
 
 def main():
