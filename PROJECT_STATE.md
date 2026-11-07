@@ -563,3 +563,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Production checkout revision inspection (2026-11-07)
 - VPS operator pulled development branch at `3791ea759bdbc8c90fafc2fc822506614ace850d`; `git -C /opt/hermes-agency rev-parse HEAD` reported `not a git repository`. Production appears to be a file deployment without Git metadata; installed code revision is **unknown**, not assumed current.
 - Existing `hermes-agency.service` remained active. Next: compare SHA-256 of selected security-critical Python files in development versus installed production, without exposing contents or changing files. Do not infer overall tree equivalence from a small sample.
+
+
+## Production file hash comparison (2026-11-07)
+- VPS development checkout at `57dc778`; `/opt/hermes-agency` is not a Git checkout. SHA-256 hashes of `agency/single_vps_service.py`, `agency/service_lifecycle.py`, and `agency/private_state.py` match development exactly.
+- `agency/trusted_execution.py` differs: development `61f66b9878d63b164318afc716382fb59df1d01b194aa483a1e781d7531135ff`, production `ab1dc7259b80aca85e7fea60a202b71446e4fd5363ab310d6c57eb62b10520f6`.
+- `agency/supervised_broker.py`, `agency/operator_service.py`, and `agency/operator_control.py` are absent from production. Main service remains `active`.
+- **Deployment blocker:** complete dependency inventory and compatibility check needed before any file copy. Preserve production worker behavior and prepare atomic/rollback-safe deployment; no production changes authorized. Update production plan accordingly.
