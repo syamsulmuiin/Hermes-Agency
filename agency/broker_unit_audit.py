@@ -17,6 +17,16 @@ REQUIRED = {
         "RestrictAddressFamilies": "AF_UNIX",
         "UMask": "0077",
         "LimitCORE": "0",
+        "ProtectKernelTunables": "yes",
+        "ProtectKernelModules": "yes",
+        "ProtectKernelLogs": "yes",
+        "ProtectControlGroups": "yes",
+        "ProtectClock": "yes",
+        "PrivateDevices": "yes",
+        "RestrictSUIDSGID": "yes",
+        "LockPersonality": "yes",
+        "RestrictRealtime": "yes",
+        "SystemCallArchitectures": "native",
     }
 }
 
