@@ -4,13 +4,14 @@ This module is an in-process integration seam, not a CLI, worker socket, or
 credential issuer. Deployment must inject a pre-provisioned candidate endpoint.
 """
 import os
+import contextlib
 
 from .trusted_execution import TrustedAgentExecution
 from .operator_control import operator_admission_lease
 
 def execute_fenced_approved_job(boundary, approval_id, task_id, job,
                                 worker_credential, lease_token, *,
-                                broker_key_path, broker_socket_path):
+                                broker_key_path, broker_socket_path, admission_lease_held=False):
     if not isinstance(boundary, TrustedAgentExecution):
         raise TypeError("TrustedAgentExecution required")
     if os.geteuid() == 0:
@@ -23,7 +24,11 @@ def execute_fenced_approved_job(boundary, approval_id, task_id, job,
         raise PermissionError("Only pre-provisioned broker key allowed")
     # Use the existing production admission lock for the entire grant submission.
     # A maintenance exclusive drain must reject this path before execution.
-    with operator_admission_lease():
+    if type(admission_lease_held) is not bool:
+        raise TypeError("Invalid admission lease assertion")
+    # Only the trusted in-process dispatch path may assert an existing lease.
+    lease = contextlib.nullcontext() if admission_lease_held else operator_admission_lease()
+    with lease:
         return boundary.execute_operator_approved_job(
             approval_id, task_id, job, worker_credential, lease_token,
             broker_key_path, broker_socket_path)
