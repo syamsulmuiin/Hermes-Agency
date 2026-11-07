@@ -873,3 +873,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation to 4f1d625 and ran ten unittest modules including fenced_recovery_lifecycle plus all nine prior suites.
 - Result: 46 tests in 1.105s, OK, TEST_EXIT_CODE=0. All three new lifecycle CLI tests passed; the argparse usage message in the missing-gate negative test is expected.
 - No independent recovery service/drop-in installed, no systemd daemon reload, no real transient unit or broker crash tested. Durable unit ownership, broker lifecycle coordination, and lease-loss race remain open blockers for production acceptance.
+
+
+## Durable fenced-unit ownership prototype (2026-11-07)
+- Commit c6e03fd: added agency/fenced_unit_journal.py. Root-owned SQLite journal registers allowlisted transient unit names as pending before launch, uses synchronous=FULL and fsync on parent directory; recovery verifies stop before changing pending to verified. Unverified units remain pending.
+- Commit 8c4643e: optional journal_path in supervised_fenced_unit; records ownership before invoking runner. Production broker path does not yet supply journal_path.
+- Commit 3055edc: four isolated journal tests added (prelaunch persistence, crash-before-launch record, recovery failure stays pending, invalid unit rejection). NOT YET VERIFIED ON VPS.
+- Remaining: integrate journal recovery into independent CLI and startup gate, enforce single-broker systemd orchestration, test actual kill -9 while real transient unit runs, and resolve fence lock release race before production noop acceptance. Journal tests mock filesystem ownership checks and systemd controls; they do not prove actual crash safety.
