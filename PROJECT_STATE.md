@@ -730,3 +730,11 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Broker socket 0660 root:hermes-trusted, operator socket 0600 hermes-trusted:hermes-trusted. Worker denied both socket connections. Invalid operator credential denied. Isolated SQLite BEGIN IMMEDIATE competing-writer exclusion and commit passed.
 - Acceptance summary: FAILURES=0, FULL_NONDESTRUCTIVE_ACCEPTANCE=PASS, ACCEPTANCE_EXIT_CODE=0.
 - Scope limitation: no real positive approved signed-grant, replay or expired-grant, revocation race, real systemd fixed job, or audit ledger E2E tested. No production restart, DB mutation, or boot-policy changes performed by this acceptance script. Production readiness is NOT yet approved.
+
+
+## Targeted broker integration suite (operator evidence, 2026-11-07)
+- On VPS checkout 82acc07, operator ran 14 explicit unittest modules for broker grants, operator authentication, systemd restrictions, trusted adapter, and trusted broker socket.
+- Result: Ran 77 tests in 0.890s, OK (skipped=1); zero failures. Expected CLI argparse negative-test errors appeared and those tests passed.
+- Confirmed PASS: actual approved grant through test socket and replay denial; revoked and expired leases denied; lease revocation blocked during execution; forged job denied; invalid peer denied; failed execution cannot replay; operator authorization and fixed-job restrictions.
+- Skipped: signing key rotation test requires dedicated non-root trusted group.
+- Scope limitation: these are repository tests, NOT proof of actual production systemd noop execution, real operator approval with production credentials, or production ledger reconciliation. Production acceptance remains pending. No service restart or production DB changes reported.
