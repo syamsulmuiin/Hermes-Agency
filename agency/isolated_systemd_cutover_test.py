@@ -134,7 +134,7 @@ class IsolatedSystemdAdapter:
 def run():
     if os.geteuid() != 0 or not os.path.isdir("/run/systemd/system"):
         raise PermissionError("Root and real systemd required")
-    for failure in (None, "start_new", "route_new", "health"):
+    for failure in (None, "start_new", "route_new", "health", "unfreeze"):
         _stop(OLD)
         _stop(NEW)
         adapter = IsolatedSystemdAdapter(failure=failure)
@@ -149,10 +149,16 @@ def run():
             except CutoverError:
                 if failure is None:
                     raise
-                if not _active(OLD) or _active(NEW) or adapter.route != "legacy":
-                    raise AssertionError("Rollback did not restore isolated legacy unit")
-                if adapter.frozen:
-                    raise AssertionError("Admission remained frozen after verified rollback")
+                if failure == "unfreeze":
+                    if not _active(NEW) or _active(OLD) or adapter.route != "fenced":
+                        raise AssertionError("Unfreeze failure lost successful handover")
+                    if not adapter.quarantined or not adapter.frozen:
+                        raise AssertionError("Unfreeze failure did not quarantine")
+                else:
+                    if not _active(OLD) or _active(NEW) or adapter.route != "legacy":
+                        raise AssertionError("Rollback did not restore isolated legacy unit")
+                    if adapter.frozen:
+                        raise AssertionError("Admission remained frozen after verified rollback")
             print("ISOLATED_SYSTEMD_CUTOVER_" +
                   ("SUCCESS" if failure is None else failure.upper()) + "=PASS", flush=True)
         finally:
