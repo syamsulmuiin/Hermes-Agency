@@ -25,7 +25,7 @@ class RuntimeEvidenceTests(unittest.TestCase):
              patch.object(evidence.SNAPSHOT.__class__, "exists", return_value=freeze), \
              patch.object(evidence.os, "readlink", return_value=str(evidence.SNAPSHOT)), \
              patch.object(evidence.Path, "read_bytes",
-                          return_value=b"/usr/bin/python3\\0-m\\0agency.operator_service\\0"), \
+                          return_value=b"/usr/bin/python3\0-m\0agency.operator_service\0"), \
              patch.object(evidence.Path, "lstat", return_value=lock):
             return evidence.capture()
 
