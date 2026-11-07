@@ -57,14 +57,12 @@ class IsolatedAdmissionBehaviorTests(unittest.TestCase):
         self.boundary.execute_operator_approved_job.assert_not_called()
 
     def test_inode_replacement_denied(self):
-        with operator_admission_lease(self.lock):
-            os.unlink(self.lock)
-            fd = os.open(self.lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o640)
-            os.close(fd)
-            os.chmod(self.lock, 0o640)
-            with self.assertRaisesRegex(PermissionError, "inode changed"):
-                with operator_admission_lease(self.lock):
-                    pass
+        with self.assertRaisesRegex(PermissionError, "inode changed"):
+            with operator_admission_lease(self.lock):
+                os.unlink(self.lock)
+                fd = os.open(self.lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o640)
+                os.close(fd)
+                os.chmod(self.lock, 0o640)
 
 
 if __name__ == "__main__":
