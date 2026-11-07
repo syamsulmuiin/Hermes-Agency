@@ -1454,3 +1454,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## VPS caller routing audit verified (2026-11-07)
 - Operator ran `agency.fenced_caller_route_audit`: `TRUSTED_APPROVED_JOB_ADAPTER_PRESENT=PASS`, `WORKER_SOCKET_BROKER_ROUTE_EXPOSED=NO`, `PRODUCTION_FENCED_CALLER_ROUTE_VERIFIED=NO`, `PRODUCTION_CUTOVER_AUTHORIZED=NO`, audit exit 0. Both production services active.
 - Exit 0 confirms correct audit execution, NOT that production routing works. Keep cutover blocked until a trusted-only operator ingress and full signed grant route are implemented and independently verified.
+
+## Trusted-only fenced route seam (2026-11-07)
+- Added `agency/fenced_trusted_route.py` (`e28bee3`) as non-root in-process fixed-endpoint delegation to existing `TrustedAgentExecution.execute_operator_approved_job`; no new socket, CLI, credentials, or worker permissions. Added unit tests (`8e86a71`) for root/endpoint rejection and delegation. VPS tests pending.
+- This seam is NOT wired into live trusted operator ingress, and mock delegation tests are NOT real approved-grant E2E. Existing isolated broker+PID1 recovery PASS remains valid. Final cutover inspection is NO-GO pending operator ingress wiring, end-to-end real approval test and manifest audit; production unchanged.
