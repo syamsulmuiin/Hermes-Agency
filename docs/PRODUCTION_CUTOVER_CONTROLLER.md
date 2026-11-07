@@ -25,3 +25,9 @@ The `quarantine()` adapter contract must implement a durable, independently enfo
 Run `python3 -m unittest discover -s tests -q` and
 `python3 -m agency.production_cutover_controller --simulate`.
 These do not execute the production handover.
+
+## Combined real-systemd acceptance (2026-11-07)
+- Added `agency.isolated_cutover_crash_acceptance --execute`, which sequentially runs isolated systemd cutover fault injection and the existing real trusted-UID IPC / SIGKILL / independent recovery / journal-gated restart suite.
+- These scenarios use isolated transient units and staging fixtures, not the actual fenced broker socket, grant verification and persisted signed-grant ledger across a broker restart.
+- The combined runner intentionally prints `REAL_FENCED_BROKER_SOCKET_REPLAY_E2E=NOT_TESTED` and `PRODUCTION_CUTOVER_GO=NO` even if all included tests pass.
+- Do not infer production readiness from a successful combined runner. A separate genuine candidate broker socket + signed grant + SQLite replay + SIGKILL E2E remains required.
