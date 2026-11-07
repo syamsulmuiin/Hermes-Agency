@@ -1061,3 +1061,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added `agency/real_cleanup_restart_gate_test.py` (commit 24077d3), opt-in isolated VPS acceptance. Non-root trusted sidecar holds a private SQLite writer lock while a real transient systemd unit remains active and root journal pending. Broker EOF triggers a deliberately failing cleanup callback; the sidecar exits nonzero and SQLite lock releases. Test verifies unit remains active, journal remains pending and startup gate denies work.
 - Creates a random real systemd oneshot service with `ExecStartPre` invoking the actual startup gate: service start must fail and `ExecStart` marker must remain absent while journal pending. Independent explicit `recover_owned_units` then stops/verifies the test unit; subsequent service start must succeed. No production service modified.
 - Candidate has NOT yet been run or compiled on VPS; do not claim PASS. This tests actual systemd startup gate on a test service, not production broker restart orchestration, which remains to be wired and validated. Existing supervisor and sidecar SIGKILL tests passed separately.
+
+
+## Real trusted IPC cleanup failure + systemd restart gate VPS PASS (2026-11-07)
+- Operator ran `python3 -m py_compile agency/real_cleanup_restart_gate_test.py`: `COMPILE_EXIT_CODE=0`.
+- Actual VPS test: `real_cleanup_failure_lock_held_before_injection=PASS`, injected `PermissionError: Injected independent cleanup failure` in non-root trusted sidecar, `real_cleanup_failure_pending_gate=PASS`, `real_restart_pending_systemd_gate=PASS`, `real_restart_after_verified_recovery=PASS`, `CLEANUP_RESTART_EXIT_CODE=0`.
+- This proves isolated actual IPC cleanup failure leaves ownership pending, real systemd ExecStartPre denies start until explicit stop/verify recovery marks journal verified. All four isolated crash/cleanup/restart acceptance scenarios now PASS on VPS.
+- Production is NOT crash-containment-ready merely from these tests: production systemd unit, broker launch paths, independent watcher and gate ordering remain unwired/unaudited. No production changes authorized or made.
