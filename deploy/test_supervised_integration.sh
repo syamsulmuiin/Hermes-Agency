@@ -15,7 +15,10 @@ if id -G "$WORKER_USER" | tr ' ' '\n' | grep -qx "$TGID"; then
 fi
 BASE="$(mktemp -d /tmp/hermes-supervised-e2e.XXXXXXXX)"
 UNIT="hermes-broker-accept-${BASE##*.}"
+OPUNIT="hermes-operator-accept-${BASE##*.}"
 cleanup() {
+  systemctl stop "$OPUNIT.service" >/dev/null 2>&1 || true
+  systemctl reset-failed "$OPUNIT.service" >/dev/null 2>&1 || true
   systemctl stop "$UNIT.service" >/dev/null 2>&1 || true
   systemctl reset-failed "$UNIT.service" >/dev/null 2>&1 || true
   rm -rf -- "$BASE"
@@ -114,11 +117,101 @@ PY
 runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_integration_client \
   --database "$DB" --credential-key "$BASE/trusted/credential.key" \
   --broker-key "$KEY" --socket "$SOCK"
+# Start an isolated copy of the REAL trusted service with opt-in operator IPC.
+# The live production hermes-agency.service is not touched.
+WORKER_GID="$(id -g "$WORKER_USER")"
+TRUSTED_GROUP="$(id -gn "$TRUSTED_USER")"
+install -d -m 0710 -o "$TUID" -g "$WORKER_GID" "$BASE/worker-socket"
+install -d -m 0700 -o "$TUID" -g "$TGID" "$BASE/operator"
+install -d -m 0700 -o "$TUID" -g "$TGID" "$BASE/trusted/keys"
+chown "$TUID:$TGID" "$DB"
+chmod 0600 "$DB"
+python3 - "$BASE/trusted/operator_verifier.json" "$TUID" "$TGID" <<'PY'
+import json, os, sys
+from agency.operator_auth import LocalOperatorGate
+path, uid, gid = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+# Test-only ephemeral secret; NEVER use this value outside this acceptance.
+salt, verifier = LocalOperatorGate.provision(bytes.fromhex("4f" * 32))
+record = {"identity": "operator", "salt_hex": salt.hex(), "verifier_hex": verifier.hex()}
+fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+try:
+    os.fchown(fd, uid, gid)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as output:
+        fd = -1
+        json.dump(record, output)
+finally:
+    if fd >= 0:
+        os.close(fd)
+PY
+OPSOCK="$BASE/operator/operator.sock"
+systemd-run --system --unit="$OPUNIT" --collect \
+  --working-directory="$BASE/app" \
+  --property=Type=exec --property="User=$TRUSTED_USER" \
+  --property="Group=$TRUSTED_GROUP" --property=NoNewPrivileges=yes \
+  --property=ProtectHome=no --property=PrivateTmp=no \
+  --property=ProtectSystem=strict --property="ReadWritePaths=$BASE" \
+  --property=RestrictAddressFamilies=AF_UNIX \
+  /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.single_vps_service \
+  --forever --socket "$BASE/worker-socket/trusted.sock" \
+  --state-dir "$BASE/trusted" --database "$DB" \
+  --key-dir "$BASE/trusted/keys" --client-gid "$WORKER_GID" \
+  --allow-uid "$WUID" --secret-file "$BASE/trusted/credential.key" \
+  --operator-socket "$OPSOCK" \
+  --operator-verifier "$BASE/trusted/operator_verifier.json" \
+  --broker-key "$KEY" --broker-socket "$SOCK"
+for _ in $(seq 1 80); do
+  [[ -S "$OPSOCK" ]] && break
+  sleep 0.1
+done
+[[ -S "$OPSOCK" ]] || { echo "Operator socket startup failed" >&2; journalctl -u "$OPUNIT" -n 30 --no-pager; exit 1; }
+[[ "$(stat -c '%a:%u:%g' "$OPSOCK")" == "600:$TUID:$TGID" ]] || exit 1
+if runuser -u "$WORKER_USER" -- python3 -c 'import socket,sys;s=socket.socket(socket.AF_UNIX);s.connect(sys.argv[1])' "$OPSOCK" >/dev/null 2>&1; then
+  echo "SECURITY FAILURE: worker reached operator socket" >&2; exit 1
+fi
+echo "worker_operator_socket_denied=PASS"
+OPREQUEST="$BASE/trusted/pending-operator.json"
+runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_integration_client \
+  --database "$DB" --credential-key "$BASE/trusted/credential.key" \
+  --broker-key "$KEY" --socket "$SOCK" \
+  --prepare-operator-path "$OPREQUEST"
+python3 - "$OPSOCK" "$OPREQUEST" "$DB" "$LEDGER" <<'PY'
+import json, socket, sqlite3, sys
+from pathlib import Path
+sock, reqpath, dbpath, ledgerpath = sys.argv[1:]
+fixture = json.loads(Path(reqpath).read_text())
+def send(secret):
+    payload = dict(fixture, operator_secret_hex=secret)
+    with socket.socket(socket.AF_UNIX) as client:
+        client.settimeout(5)
+        client.connect(sock)
+        client.sendall((json.dumps(payload, separators=(",", ":")) + "\n").encode())
+        client.shutdown(socket.SHUT_WR)
+        data = client.recv(128)
+    return json.loads(data)
+assert send("00" * 32) == {"status": "denied"}, "Invalid operator secret accepted"
+with sqlite3.connect(dbpath) as db:
+    row = db.execute("SELECT status FROM approvals WHERE id=?", (fixture["approval_id"],)).fetchone()
+assert row == ("pending",), ("Invalid operator secret mutated approval", row)
+with sqlite3.connect(ledgerpath) as db:
+    count = db.execute("SELECT COUNT(*) FROM signed_grant_consumptions").fetchone()[0]
+assert count == 2, ("Bad operator secret consumed broker grant", count)
+print("invalid_operator_secret_denied=PASS")
+assert send("4f" * 32) == {"status": "accepted"}, "Valid root operator failed"
+with sqlite3.connect(dbpath) as db:
+    row = db.execute("SELECT status,reviewer FROM approvals WHERE id=?", (fixture["approval_id"],)).fetchone()
+assert row == ("consumed", "operator"), ("Operator approval not consumed", row)
+with sqlite3.connect(ledgerpath) as db:
+    rows = db.execute("SELECT status,COUNT(*) FROM signed_grant_consumptions GROUP BY status").fetchall()
+assert rows == [("completed", 3)], ("Operator job not completed", rows)
+print("authenticated_operator_to_systemd=PASS")
+PY
+systemctl is-active --quiet "$OPUNIT.service"
 systemctl is-active --quiet "$UNIT.service"
 python3 - "$LEDGER" <<'PY'
 import sqlite3, sys
 with sqlite3.connect(sys.argv[1]) as db:
     rows = db.execute("SELECT status,COUNT(*) FROM signed_grant_consumptions GROUP BY status").fetchall()
-assert rows == [("completed", 2)], rows
-print('supervised_systemd=PASS worker_denied=PASS key_rotated_new_grants=PASS ledger=PASS')
+assert rows == [("completed", 3)], rows
+print('supervised_systemd=PASS worker_denied=PASS key_rotated_new_grants=PASS operator_peer_denied=PASS authenticated_operator=PASS ledger=PASS')
 PY
