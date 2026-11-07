@@ -1424,3 +1424,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Sandbox smoke cleanup bug found and patched (2026-11-07)
 - Operator VPS: `CANDIDATE_ACTUAL_SANDBOX_IMPORTS=PASS`, `PRODUCTION_CUTOVER_EXECUTED=NO`, but smoke exit 1: `stop_and_verify_unit` rejected randomly named `hermes-sandbox-*` fixture (`Unsafe fenced unit identity`). Both production services remained active.
 - Fixed test-only unit prefix to allowlisted `hermes-fenced-` with 32 lowercase hex digits (`67359a4`); no change to supervisor security validation, production services or sandbox properties. VPS rerun pending; do not label complete sandbox smoke PASS yet.
+
+## Pinned deployment sandbox systemd smoke PASS (2026-11-07)
+- Operator VPS pulled `413b40c` and reran `python3 -m agency.fenced_sandbox_smoke --deployed /opt/hermes-fenced-377abe8b948b --execute`: `CANDIDATE_ACTUAL_SANDBOX_IMPORTS=PASS`, `PRODUCTION_CUTOVER_EXECUTED=NO`, `SANDBOX_EXIT_CODE=0`. Both production services active.
+- Confirms candidate imports with selected real systemd transient sandbox directives and cleanup, not the exact persistent candidate unit, DB/key/socket access or independent PID1 ordering. Next: validate those in isolated staging without touching live service.
