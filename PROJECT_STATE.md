@@ -1237,3 +1237,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added opt-in `agency/real_staging_race_acceptance_test.py` (`7819f9c`) to test multiprocess journal lock exclusion, ordered recovery, pending startup denial and post-recovery gate. NOT YET VPS-EXECUTED; no systemd jobs are started by this fixture.
 - Audit: `agency/systemd_jobs.py:run_systemd_job` still invokes `systemd-run` directly for a root operator with no signed grant, trusted peer, journal, or watchdog. This is a real alternate root-only path, although not agent-exposed by its documented API. Do not claim universal fencing while it exists.
 - Staging broker/launcher explicitly declare not production-wired. Production integration is NOT implemented or activated; no service change is authorized until entrypoint mapping, compatibility review, bypass closure, and staging validation. Preserve existing production availability and current fixed job allowlist.
+
+## Multiprocess staging race acceptance VERIFIED on VPS (2026-11-07)
+- VPS at `300fce2`: `STATIC_EXIT=0`, `RACE_EXIT=0`, `PRODUCTION_SERVICE_EXIT=0` (`active`).
+- `RACE_RECOVERY_BLOCKED_DURING_LAUNCH=PASS`, `RACE_RECOVERY_AFTER_LAUNCH=PASS`, `RACE_PENDING_GATE_DENIES_NEW_LAUNCH=PASS`, `RACE_POST_RECOVERY_GATE=PASS`.
+- Evidence covers isolated multiprocess staging journal locking and startup gating, not all possible distributed/process-death interleavings. No production changes made.
+- Remaining blockers: audit all callers of root-only direct `run_systemd_job` and remove/guard unfenced bypass without regression; prepare and validate production integration separately before activation.
