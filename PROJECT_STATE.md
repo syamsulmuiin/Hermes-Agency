@@ -636,3 +636,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - User executed approved root-only backup at `/root/hermes-deployment-backups/20261107T013007Z` (directory `0700 root:root`).
 - Backup contains `production-agency.tar.gz` (original installed agency code), `trusted-keys.tar.gz` (sensitive credentials), consistent SQLite Backup API snapshot `agency.db` (integrity check PASS), and `SHA256SUMS` (all three files OK). Archives validated; production main service remained `active`.
 - Treat backups as sensitive and do not transmit secrets. Preserve live database during rollback rather than restoring snapshot by default. Next gate: preflight exact 11-file runtime overlay and rollback strategy before writing `/opt/hermes-agency`; do not replace unrelated modules.
+
+
+## Production broker key and ledger provisioned (2026-11-07)
+- User executed root-only provisioning after identity and existing-path checks. `/etc/hermes-broker` `0710 root:hermes-trusted`, `/etc/hermes-broker/signing.key` `0640 root:hermes-trusted` (64 raw bytes), `/var/lib/hermes-broker` `0700 root:root`, `/var/lib/hermes-broker/ledger.sqlite` `0600 root:root`.
+- Output `BROKER_PROVISIONING=PASS`, `BROKER_KEY_SIZE=PASS`; main `hermes-agency.service` remains `active`.
+- Broker and operator units not yet installed or started. Never re-run exclusive provisioning blindly, rotate keys, or expose credentials. Next gate: interactive operator verifier provisioning under trusted private UID/GID, then opt-in tmpfiles and systemd unit installation and validation.
