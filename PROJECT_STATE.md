@@ -1094,3 +1094,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - IMPORTANT: all cooperating staging launch/recovery entrypoints must share the same lock. Advisory locks do not protect bypass paths; this is not a universal enforcement boundary. Existing direct run_systemd_job remains unfenced; supervisor does not mark verified on success. Neither issue is claimed fixed.
 - Outstanding: audit every execution callsite and real service configuration, prohibit direct unfenced execution at a trusted broker boundary, compose signed grants, lease, journal, stop/verify and independent systemd recovery under one staging lifecycle, test crash during lock ownership and after journal registration, and validate mandatory gate for every entrypoint. No production changes or deployment authorized.
 - Validation request: compile, run full unittest suite, read-only architecture audit and existing opt-in isolated crash suite on VPS; record exact outputs and production service active state. Do not claim PASS before those results.
+
+
+## VPS staging validation report (2026-11-07)
+- Operator supplied summary for the staging validation command after the staging serialization prototype: STATIC_EXIT=0, UNIT_EXIT=0, AUDIT_EXIT=0, CRASH_EXIT=0, PRODUCTION_SERVICE_EXIT=0, STAGING_VALIDATION=PASS, PRODUCTION_INTEGRATION_VERIFIED=NO; hermes-agency.service was active.
+- This is operator-provided VPS evidence, not independently inspected full test output. Exact unit test count and individual assertions were not supplied. Do not infer additional coverage from the aggregate exit codes.
+- No production integration or service change authorized. Next milestone: inspect full execution callsites and read-only systemd unit configuration, then wire signed grants, trusted lease IPC, durable journal, stop/verify and independent watchdog into one opt-in staging broker; add concurrency and crash injection around registration/launch/recovery.
