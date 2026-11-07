@@ -830,3 +830,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Commit fe7fa72: added opt-in agency/fenced_systemd_supervisor.py. Exact broker-owned hermes-fenced-<32hex>.service unit names only; stop and verify inactive/failed, no pending job and MainPID=0. Fail closed if stop/status cannot be verified. Not production-wired.
 - Commit e7c702e: five mocked unit lifecycle tests (reject unrelated unit, successful stop verification, stop failure, status failure, active PID denial). Not yet run on VPS.
 - SECURITY GATE: unit stop verification is not yet integrated into broker job launch, fence disconnect detection or sidecar crash recovery. A detached systemd unit may outlive the IPC connection until a persistent root watchdog kills it. Real noop acceptance remains blocked; no production changes or restarts.
+
+
+## Systemd guard and deduplication verified on VPS (2026-11-07)
+- Operator pulled development/foundation to 245873c and ran seven unittest modules: fenced_systemd_supervisor, fence_process_supervisor, fenced_broker_ledger, trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants.
+- Result: 33 tests in 1.132s, OK, TEST_EXIT_CODE=0; 5 mocked systemd guard tests, 4 subprocess supervisor tests, 1 ledger test, 5 IPC, 5 fence, 6 broker socket and 7 grant tests. IPC test discovery no longer duplicated.
+- No real systemd unit was stopped or launched in this test. Systemd stop verification helper remains opt-in and unconnected to production broker. Crash recovery and real noop acceptance are still pending.
