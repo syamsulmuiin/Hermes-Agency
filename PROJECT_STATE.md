@@ -617,3 +617,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS operator ran exact read-only parser comparison for `deploy/hermes-optional-runtime.tmpfiles.example`: `HERMES_TMPFILES_STATIC_CHECK=PASS`, `TMPFILES_CHECK_EXIT_CODE=0`.
 - Existing `hermes-agency.service` was `active` after the check. Prior broker/sidecar `systemd-analyze verify` and broker static hardening audit were PASS; minimal production-based staging imports 14/14 PASS; isolated hardened runtime acceptance previously PASS.
 - **Deployment preparation static gates completed**, but optional units/tmpfiles not installed, secrets/verifier/ledger not provisioned, live production path permissions and service activation not validated. Explicit authorization and controlled backup/rollback required before production modification.
+
+
+## Controlled production deployment authorization (2026-11-07)
+- User explicitly authorized deployment of the **optional signed broker and trusted operator sidecar** to production, preserving the existing `hermes-agency.service` and keeping general agent execution disabled. This is not authorization to restart the main service, widen agent privileges, replace credentials, or delete state.
+- Execution is gated: first collect read-only host preflight (users/groups, exact paths, filesystem/mount status, running unit, Python package permissions, free space, service account group separation), then verify backup/rollback feasibility and safe code overlay before provisioning or installing optional units.
+- No VPS access via GitHub connector; assistant cannot assert host modifications. Operator must execute approved reviewed commands and return outputs. Never print secrets, copy SQLite while live without consistent snapshot, or start optional units before path/security checks.
