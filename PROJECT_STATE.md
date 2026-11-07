@@ -1411,3 +1411,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## VPS pinned candidate import verification PASS (2026-11-07)
 - Operator ran Python imports from `/opt/hermes-fenced-377abe8b948b`: fenced broker, owned recovery and systemd supervisor all resolved under that exact staged directory. `git rev-parse HEAD` matched pinned `377abe8b948b1857a5f1d5c3cfad7379d3a1a713`.
 - This confirms staged module resolution, not service-manager sandbox, signing or recovery ordering. Production cutover remains NO.
+
+## Staged pinned deployment runtime E2E and mid-flight SIGKILL PASS (2026-11-07)
+- Operator ran from `/opt/hermes-fenced-377abe8b948b` (pinned `377abe8b948b1857a5f1d5c3cfad7379d3a1a713`). `agency.isolated_candidate_acceptance --execute` PASS: signed grant, replay denial, trusted SQLite lease, SIGKILL pending gate, independent systemd recovery and restart; exit 0.
+- `agency.real_midflight_runner_crash_acceptance --execute` PASS: real fenced runner with test-only in-memory sleep override, SIGKILL while transient unit active, gate denied pending, recovery and gate reopened; exit 0.
+- Both live services remained active. This does not validate the exact candidate manifest's `ProtectSystem=strict`, `ProtectHome=yes`, `ReadWritePaths` or production caller routing; cutover remains blocked until actual sandbox manifest test and operator-approved rollback.
