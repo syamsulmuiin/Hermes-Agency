@@ -9,7 +9,10 @@ ExecStartPost=/usr/bin/python3 -c 'import os,stat,grp; d=os.lstat("/run/hermes-a
 RemainAfterExit=yes
 NoNewPrivileges=yes
 ProtectSystem=strict
-ReadWritePaths=/run/hermes-admission
+# /run is initially empty at boot; tmpfiles must be able to create the
+# admission directory before its narrower path exists. This applies only
+# to this short-lived root provisioning oneshot, not the operator sidecar.
+ReadWritePaths=/run
 ProtectHome=yes
 
 [Install]
