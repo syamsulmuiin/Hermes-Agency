@@ -87,6 +87,18 @@ class TrustedBrokerSocketTests(unittest.TestCase):
     def test_wrong_peer_uid_denied(self):
         self.assertIsInstance(self.send(self.grant, uid=os.getuid()+1).get("error"), PermissionError)
 
+    def test_lease_revocation_blocked_during_execution(self):
+        from agency.systemd_broker import execute_signed_grant
+        def executor(job):
+            with sqlite3.connect(self.trusted_path, timeout=0.05) as other:
+                with self.assertRaises(sqlite3.OperationalError):
+                    other.execute("DELETE FROM task_leases WHERE task_id=?", (self.task,))
+            return {"job":job,"exit_code":0}
+        result = execute_signed_grant(self.ledger, self.grant, self.key,
+                                      executor=executor, now=self.clock[0],
+                                      trusted_db_path=self.trusted_path)
+        self.assertEqual(result["exit_code"], 0)
+
     def test_forged_job_denied(self):
         altered = {"claims":dict(self.grant["claims"]), "signature":self.grant["signature"]}
         altered["claims"]["job"] = "identity"
