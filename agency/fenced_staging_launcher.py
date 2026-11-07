@@ -34,7 +34,7 @@ def _peer_child(peer, control, broker, root_control, database, key, uid, gid):
 
 def run_staging_session(grant, key, journal, database, *, trusted_uid,
                         trusted_gid, runner=None, ledger=None,
-                        production_candidate=False):
+                        production_candidate=False, isolated_candidate=False):
     """Start a non-root trusted peer and concurrent root stop controller.
 
     Root controller runs in a thread because it must serve stop requests
@@ -44,7 +44,15 @@ def run_staging_session(grant, key, journal, database, *, trusted_uid,
     """
     if os.geteuid() != 0:
         raise PermissionError("Root staging operator required")
-    if production_candidate:
+    if production_candidate and isolated_candidate:
+        raise PermissionError("Candidate path profiles are mutually exclusive")
+    if isolated_candidate:
+        _staging_path(journal)
+        _staging_path(database)
+        if ledger is None:
+            raise PermissionError("Isolated candidate requires replay ledger")
+        _staging_path(ledger)
+    elif production_candidate:
         if (journal != "/var/lib/hermes-broker/owned-units.sqlite"
                 or database != "/var/lib/hermes-agency/agency.db"
                 or ledger != "/var/lib/hermes-broker/ledger.sqlite"):
