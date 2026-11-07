@@ -15,6 +15,9 @@ WorkingDirectory=/opt/hermes-agency
 ExecStartPre=/usr/bin/python3 -m agency.fenced_startup_gate --journal /var/lib/hermes-broker/owned-units.sqlite
 ExecStart=/usr/bin/python3 -m agency.fenced_broker_candidate --socket /run/hermes-broker/fenced-candidate.sock --trusted-user hermes-trusted --ledger /var/lib/hermes-broker/ledger.sqlite --journal /var/lib/hermes-broker/owned-units.sqlite --trusted-db /var/lib/hermes-agency/agency.db --key /etc/hermes-broker/signing.key --execute
 Restart=no
+# PID 1 invokes this even after abnormal main-process termination.
+# OnFailure remains an additional recovery trigger.
+ExecStopPost=/usr/bin/python3 -m agency.fenced_owned_recovery --journal /var/lib/hermes-broker/owned-units.sqlite --execute
 TimeoutStopSec=20
 NoNewPrivileges=yes
 ProtectSystem=strict
