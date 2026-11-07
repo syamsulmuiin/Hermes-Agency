@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BROKER = ROOT / "deploy/systemd/hermes-fenced-broker-candidate.service"
 RECOVERY = ROOT / "deploy/systemd/hermes-fenced-recovery-candidate.service"
-PINNED = "/opt/hermes-fenced-377abe8b948b"
+PINNED = "/opt/hermes-fenced-912dce6aef6b"
 
 def read(path):
     parser = configparser.ConfigParser(interpolation=None, strict=True)
@@ -38,6 +38,8 @@ def audit():
     check("fenced_owned_recovery" in b.get("ExecStopPost", ""), "stop recovery")
     check("fenced_owned_recovery" in r.get("ExecStart", ""), "independent recovery")
     check(b.get("Restart") == "no", "no automatic broker restart")
+    check(b.get("ExecStartPre", "").startswith("/usr/bin/python3 -m agency.fenced_startup_gate"), "startup gate before broker")
+    check(b.get("ExecStartPost", "") == "", "no unreviewed post-start execution")
     check("/run/hermes-broker" in b.get("ReadWritePaths", "").split(), "socket writable")
     check("/var/lib/hermes-broker" in b.get("ReadWritePaths", "").split(), "journal writable")
     # The real trusted UID must be able to update its SQLite lease under the
