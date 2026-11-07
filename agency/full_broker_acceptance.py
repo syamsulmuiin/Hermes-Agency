@@ -62,6 +62,7 @@ def run_acceptance(trusted_user="hermes-trusted", worker_user="hermes-worker"):
         ledger_path = os.path.join(base, "ledger.sqlite")
         trusted_db = os.path.join(state_dir, "trusted.sqlite")
         result_path = os.path.join(state_dir, "result.json")
+        envelope_path = os.path.join(state_dir, "grant.json")
         provision_broker_key(key_path, trusted.pw_gid)
         initialize_ledger(ledger_path)
 
@@ -87,6 +88,7 @@ def run_acceptance(trusted_user="hermes-trusted", worker_user="hermes-worker"):
                     key = handle.read()
                 envelope = issue_broker_grant(auth, approval, task, "noop",
                                               worker_cred, lease, key)
+                Path(envelope_path).write_text(json.dumps(envelope))
                 store.close()
                 deadline = time.monotonic() + 10
                 while not os.path.exists(socket_path) and time.monotonic() < deadline:
@@ -112,8 +114,43 @@ def run_acceptance(trusted_user="hermes-trusted", worker_user="hermes-worker"):
             row = db.execute("SELECT status FROM signed_grant_consumptions").fetchone()
         if row != ("completed",):
             raise AssertionError("Broker audit incomplete")
+        # Negative attempts use fresh root broker processes/sockets, preserving
+        # the real consumed ledger. The same signed grant must never run twice.
+        def negative_attempt(envelope, expected):
+            def client():
+                deadline = time.monotonic() + 10
+                while not os.path.exists(socket_path) and time.monotonic() < deadline:
+                    time.sleep(0.05)
+                try:
+                    submit_signed_grant(socket_path, envelope)
+                except (OSError, PermissionError):
+                    return
+                raise AssertionError(expected + " unexpectedly executed")
+            pid = _child(trusted.pw_uid, trusted.pw_gid, client)
+            try:
+                try:
+                    serve_signed_once(socket_path, trusted.pw_uid, trusted.pw_gid,
+                                      ledger_path, trusted_db, key_path)
+                except PermissionError:
+                    pass
+                else:
+                    raise AssertionError(expected + " broker accepted invalid grant")
+            finally:
+                _wait(pid)
+
+        envelope = json.loads(Path(envelope_path).read_text())
+        negative_attempt(envelope, "replay")
+        expired = json.loads(json.dumps(envelope))
+        expired["claims"]["exp"] = expired["claims"]["iat"] - 1
+        negative_attempt(expired, "tampered expiry")
+        with sqlite3.connect(ledger_path) as db:
+            count = db.execute("SELECT COUNT(*) FROM signed_grant_consumptions").fetchone()[0]
+        if count != 1:
+            raise AssertionError("Negative attempts consumed extra grants")
         return {"real_trusted_approval_to_systemd": "PASS",
                 "worker_socket_denied": "PASS", "grant_consumed": "PASS",
+                "replay_socket_denied": "PASS",
+                "tampered_expiry_socket_denied": "PASS",
                 "production_service_modified": False}
 
 
