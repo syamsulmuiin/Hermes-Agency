@@ -1481,3 +1481,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - The broker signing key read and socket submission are mocked in these unit tests. They do NOT demonstrate a real broker socket, cross-UID key access, effective systemd sandbox, live lease check at the broker, or production operator ingress.
 - GitHub commit completed; latest CI and VPS results are PENDING. No production unit or production data was changed.
 - Next: validate these regression tests on VPS, implement an isolated real-approval broker acceptance using staging identities/resources, then test effective systemd permissions and recovery ordering. Cutover remains NO-GO until verified and explicitly authorized.
+
+## VPS operator-grant regression verified (2026-11-07)
+- Operator pulled branch revision `284ea42` on VPS. `tests.test_operator_grant_integration`: 4/4 PASS, exit 0. Full suite: 312 tests OK, 1 skipped, exit 0. Candidate static manifest audit PASS, exit 0; `systemd-analyze verify` exit 0. Both production services remained active.
+- This confirms real scrypt operator authentication, persisted approval and signed grant generation at the unit/integration level, with mocked broker key loading and transport. The exact trusted operator-to-real broker E2E and effective candidate systemd resource permissions remain UNVERIFIED. No cutover authorized.
+- Code audit: `agency.isolated_candidate_acceptance` still constructs synthetic grants via `signed()` and `real_trusted_lease_ipc_test.fixture`. Do not mistake its real systemd crash recovery proof for authenticated operator E2E. Next staging implementation must replace the synthetic provenance with a real trusted approval and preserve separate staging UID, key, DB, ledger, journal and socket.
