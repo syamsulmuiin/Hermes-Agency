@@ -46,6 +46,7 @@ class CandidateOperatorRouteTests(unittest.TestCase):
             dispatch_operator(self.boundary, self.request, self.verifier,
                               "/tmp/untrusted.key",
                               "/run/hermes-broker/fenced-candidate.sock")
+        self.boundary.approve_operator_request.assert_not_called()
         self.boundary.execute_operator_approved_job.assert_not_called()
 
     @patch("agency.operator_control.os.path.lexists", return_value=True)
