@@ -83,7 +83,7 @@ def load_operator_verifier(path):
 
 
 @contextlib.contextmanager
-def operator_admission_lease(path="/run/hermes-operator/admission.lock"):
+def operator_admission_lease(path="/run/hermes-admission/admission.lock"):
     """Shared nonblocking lock held across approval and broker execution.
 
     A maintenance controller must acquire an exclusive lock on this same
@@ -91,12 +91,12 @@ def operator_admission_lease(path="/run/hermes-operator/admission.lock"):
     Existing sidecar processes must be restarted onto this code before
     the lock can provide a complete quiescence guarantee.
     """
-    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
         info = os.fstat(fd)
         if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
-                or info.st_uid not in (0, os.geteuid())
-                or stat.S_IMODE(info.st_mode) & 0o077):
+                or info.st_uid != 0
+                or stat.S_IMODE(info.st_mode) != 0o640):
             raise PermissionError("Unsafe admission lock")
         try:
             fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
