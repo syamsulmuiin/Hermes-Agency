@@ -1232,3 +1232,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Post-test `systemctl list-units --all 'hermes-integrated-*' 'hermes-fenced-*'` reported zero loaded units; `hermes-agency.service` remained `active` (`PRODUCTION_SERVICE_EXIT=0`).
 - The trusted peer emitted `BrokenPipeError` during deliberate broker SIGKILL; independent recovery still completed and the acceptance test exited zero. Consider targeted expected-disconnect diagnostics without changing fail-closed semantics.
 - This is verified isolated integrated staging crash recovery, NOT production wiring. Remaining: concurrency/race acceptance, direct unfenced systemd execution audit/closure, and production integration authorization. Do not merge main or alter production.
+
+## Concurrent launch/recovery and direct bypass audit (2026-11-07)
+- Added opt-in `agency/real_staging_race_acceptance_test.py` (`7819f9c`) to test multiprocess journal lock exclusion, ordered recovery, pending startup denial and post-recovery gate. NOT YET VPS-EXECUTED; no systemd jobs are started by this fixture.
+- Audit: `agency/systemd_jobs.py:run_systemd_job` still invokes `systemd-run` directly for a root operator with no signed grant, trusted peer, journal, or watchdog. This is a real alternate root-only path, although not agent-exposed by its documented API. Do not claim universal fencing while it exists.
+- Staging broker/launcher explicitly declare not production-wired. Production integration is NOT implemented or activated; no service change is authorized until entrypoint mapping, compatibility review, bypass closure, and staging validation. Preserve existing production availability and current fixed job allowlist.
