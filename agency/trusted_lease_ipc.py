@@ -17,7 +17,7 @@ from .trusted_lease_fence import fenced_lease
 MAX_MESSAGE = 4096
 
 
-def _read_line(conn):
+def _read_line(conn, *, allow_clean_eof=False):
     data = bytearray()
     while len(data) <= MAX_MESSAGE:
         chunk = conn.recv(min(512, MAX_MESSAGE + 1 - len(data)))
@@ -26,7 +26,7 @@ def _read_line(conn):
         data.extend(chunk)
         if b"\n" in data:
             break
-    if not data.endswith(b"\n") or data.count(b"\n") != 1 or len(data) > MAX_MESSAGE:
+    if not data and allow_clean_eof:\n        return None\n    if not data.endswith(b"\n") or data.count(b"\n") != 1 or len(data) > MAX_MESSAGE:
         raise PermissionError("Invalid lease IPC framing")
     return bytes(data[:-1])
 
