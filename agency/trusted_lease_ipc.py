@@ -35,8 +35,16 @@ def _send(conn, message):
     conn.sendall(json.dumps(message, separators=(",", ":")).encode() + b"\n")
 
 
-def serve_fence_connection(conn, database, verification_key, *, root_uid=0, now=None):
-    """Handle one root-broker connection; release SQLite lock on all exits."""
+def serve_fence_connection(conn, database, verification_key, *, root_uid=0, now=None,
+                           cleanup_before_release=None):
+    """Handle one connection; optional trusted cleanup occurs before lock release.
+
+    cleanup_before_release is an operator-wired trusted callback, never a
+    client-provided unit name. On cleanup failure the process must fail closed:
+    a SQLite transaction lock alone cannot survive process termination.
+    """
+    if cleanup_before_release is not None and not callable(cleanup_before_release):
+        raise TypeError("Trusted cleanup callback must be callable")
     peer = struct.unpack("3i", conn.getsockopt(
         socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i")))
     if peer[1] != root_uid:
@@ -50,9 +58,15 @@ def serve_fence_connection(conn, database, verification_key, *, root_uid=0, now=
         _send(conn, {"status": "locked", "grant_id": claims["id"]})
         # Do not expire a valid fence merely because the job exceeds 10s.
         conn.settimeout(None)
-        finish = json.loads(_read_line(conn))
-        if finish != {"status": "done", "grant_id": claims["id"]}:
-            raise PermissionError("Invalid lease IPC completion")
+        try:
+            finish = json.loads(_read_line(conn))
+            if finish != {"status": "done", "grant_id": claims["id"]}:
+                raise PermissionError("Invalid lease IPC completion")
+        finally:
+            # Keep BEGIN IMMEDIATE held until the trusted-side job lifecycle
+            # has been stopped and verified, including unexpected broker EOF.
+            if cleanup_before_release is not None:
+                cleanup_before_release(claims)
     _send(conn, {"status": "released", "grant_id": claims["id"]})
     return claims["id"]
 
