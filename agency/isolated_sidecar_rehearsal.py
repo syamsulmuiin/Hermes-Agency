@@ -7,6 +7,8 @@ import os
 import pwd
 import secrets
 import signal
+import stat
+import sys
 import time
 import traceback
 
@@ -180,6 +182,8 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo,
                                             credential_secret, "identity")
             hold_callback(operator_socket, hold_request)
     finally:
+        original_failure = sys.exc_info()[0] is not None
+        forced_kill = False
         if not child_reaped:
             try:
                 os.kill(pid, signal.SIGTERM)
@@ -197,6 +201,7 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo,
             else:
                 try:
                     os.kill(pid, signal.SIGKILL)
+                    forced_kill = True
                 except ProcessLookupError:
                     pass
                 try:
@@ -205,4 +210,12 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo,
                     pass
         os.close(error_read)
         if os.path.lexists(operator_socket):
-            raise AssertionError("Sidecar did not clean up operator socket")
+            # Forced termination cannot execute the listener unlink handler.
+            # Remove only the socket inside this disposable trusted directory.
+            entry = os.lstat(operator_socket)
+            if forced_kill and stat.S_ISSOCK(entry.st_mode) and entry.st_uid == identity.pw_uid:
+                os.unlink(operator_socket)
+            elif original_failure:
+                print("SIDECAR_SOCKET_CLEANUP_INCOMPLETE=FAIL", flush=True)
+            else:
+                raise AssertionError("Sidecar did not clean up operator socket")
