@@ -26,8 +26,14 @@ def provision(directory=DIRECTORY, trusted_group="hermes-trusted"):
         raise PermissionError("Unsafe admission directory")
     fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-        lock_fd = os.open("admission.lock", os.O_RDWR | os.O_CREAT | os.O_EXCL |
-                          os.O_NOFOLLOW | os.O_CLOEXEC, 0o600, dir_fd=fd) if not os.path.lexists(LOCK) else None
+        # Use the caller-supplied directory, never the global production path.
+        # O_EXCL is atomic: a concurrent creator is validated, not replaced.
+        try:
+            lock_fd = os.open("admission.lock", os.O_RDWR | os.O_CREAT |
+                              os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                              0o600, dir_fd=fd)
+        except FileExistsError:
+            lock_fd = None
         if lock_fd is not None:
             try:
                 os.fchown(lock_fd, 0, group)
