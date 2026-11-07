@@ -127,6 +127,9 @@ def audit():
         blockers.append("Installed PID1 recovery wiring not verified: " + type(exc).__name__)
     # Distinguish locally observed state from external acceptance evidence.
     # Prior manual tests are not durable attestations; never auto-promote them.
+    # A separately generated bundle is an audit artifact, not live proof.
+    # Never consume arbitrary JSON as a production authorization signal.
+    evidence.append("STAGING_BUNDLE=SEPARATE_NON_AUTHORIZING_ARTIFACT")
     evidence.append("CANDIDATE_ROUTE_UNIT_TESTS=EXTERNAL_RESULT_NOT_ATTESTED")
     evidence.append("TMPFILES_EMPTY_DIRECTORY_TEST=EXTERNAL_RESULT_NOT_ATTESTED")
     evidence.append("LIVE_ADMISSION_FLOCK_TEST=EXTERNAL_RESULT_NOT_ATTESTED")
