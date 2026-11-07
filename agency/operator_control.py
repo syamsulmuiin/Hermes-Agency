@@ -103,6 +103,12 @@ def operator_admission_lease(path="/run/hermes-operator/admission.lock"):
         except BlockingIOError as exc:
             raise PermissionError("Operator admission locked for maintenance") from exc
         try:
+            # An unlink/recreate of the pathname must not split the lock
+            # domain between an old inode and a replacement inode.
+            current = os.stat(path, follow_symlinks=False)
+            if (current.st_dev != info.st_dev or current.st_ino != info.st_ino
+                    or current.st_nlink != 1):
+                raise PermissionError("Admission lock inode changed")
             yield
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)
