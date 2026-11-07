@@ -1432,3 +1432,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Resource audit and final cutover/rollback planning (2026-11-07)
 - GitHub `33d15a3`: added explicit opt-in read-only real systemd candidate resource metadata audit, using pinned /opt deployment, candidate sandbox and random fenced transient unit. It does not read key bytes, mutate DB/ledger/journal or start broker. VPS result PENDING; no claim of resource write acceptance.
 - GitHub `7b439e7`: expanded `docs/FENCED_PRODUCTION_CUTOVER_RUNBOOK.md` with bounded metadata test, full resource write/peer authorization/PID1 recovery and caller routing acceptance criteria, explicit no-go cutover decision and conditional rollback decision tree. No production unit modified. Exact staging manifest and integration tests still pending; no production cutover authorized.
+
+## VPS real systemd resource metadata audit PASS (2026-11-07)
+- Operator ran `agency.fenced_resource_audit --deployed /opt/hermes-fenced-377abe8b948b --execute` from checkout `68f89a5`. All three production file metadata checks (trusted DB, broker ledger, signing key) and both directory metadata checks (/run/hermes-broker, /var/lib/hermes-broker) passed under sandbox, exit 0. Both production services active, cutover NO.
+- Output explicitly `RESOURCE_CONTENT_OR_WRITE_TESTED=NO`: not evidence of signing-key read, SQLite write/WAL, socket binding, trusted UID access or PID1 recovery unit ordering. Next gate must use isolated writable staging resources and actual systemd recovery ordering.
