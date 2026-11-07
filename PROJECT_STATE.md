@@ -486,3 +486,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - VPS verification and production-equivalent runtime acceptance are pending. The existing transient acceptance harness does not use this unit's full hardening and cannot certify compatibility.
 - Unused pre-rotation grant rejection test and authenticated integration into the running trusted service are still pending; isolated acceptance's self-issued operator credential is NOT a substitute for a real authenticated operator.
 - No live service restart, broker deployment, or worker privilege changes performed.
+
+## Runtime security acceptance expansion (2026-11-07)
+- Added isolated trusted-client `--prepare-path` for creating a genuinely approved but **unsubmitted** signed grant; the supervised harness rotates the HMAC key, attempts the still-unexpired old grant, asserts rejection and no new ledger consumption, then executes a fresh post-rotation grant. VPS result pending.
+- The transient supervised systemd test now enables kernel/device/control-group/personality/SUID/realtime/syscall-architecture restrictions from the hardened production template. It deliberately uses `PrivateTmp=no`, `ProtectHome=no`, and temporary test-specific ReadWritePaths/WorkingDirectory, so this is **not** full production-unit equivalence.
+- Added `TrustedAgentExecution.execute_operator_approved_job` as an **in-process only** adapter requiring an already approved request, worker credential and lease; existing worker-facing stage protocol is unchanged. This is **not yet connected** to the running `hermes-agency.service` or to an external authenticated operator entrypoint; deployment and live E2E still pending.
+- No persistent broker installed, no live trusted service restarted, no worker permission expanded.
