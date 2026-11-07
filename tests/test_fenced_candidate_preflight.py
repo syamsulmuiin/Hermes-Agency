@@ -14,7 +14,8 @@ class CandidatePreflightTests(unittest.TestCase):
         broker = {"Service": {
             "ExecStart": "agency.fenced_broker_candidate --execute --journal /var/lib/hermes-broker/owned-units.sqlite --socket /run/hermes-broker/fenced-candidate.sock",
             "ExecStartPre": "agency.fenced_startup_gate --journal /var/lib/hermes-broker/owned-units.sqlite",
-            "Restart": "no", "User": "root"},
+            "Restart": "no", "User": "root",
+            "ExecStopPost": "agency.fenced_owned_recovery --journal /var/lib/hermes-broker/owned-units.sqlite --execute"},
             "Unit": {"OnFailure": "wrong.service"}}
         recovery = {"Service": {
             "ExecStart": "agency.fenced_owned_recovery --journal /var/lib/hermes-broker/owned-units.sqlite --execute",
