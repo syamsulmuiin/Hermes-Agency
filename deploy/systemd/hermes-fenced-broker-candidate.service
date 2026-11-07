@@ -1,0 +1,23 @@
+# INACTIVE CANDIDATE. Do not install or enable before isolated acceptance.
+# Uses a separate socket and never replaces the active signed broker.
+[Unit]
+Description=Hermes fenced signed broker candidate (NOT production enabled)
+RequiresMountsFor=/var/lib/hermes-broker /var/lib/hermes-agency
+After=hermes-fenced-recovery-candidate.service
+Requires=hermes-fenced-recovery-candidate.service
+OnFailure=hermes-fenced-recovery-candidate.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/hermes-agency
+ExecStartPre=/usr/bin/python3 -m agency.fenced_startup_gate --journal /var/lib/hermes-broker/owned-units.sqlite
+ExecStart=/usr/bin/python3 -m agency.fenced_broker_candidate --socket /run/hermes-broker/fenced-candidate.sock --trusted-user hermes-trusted --ledger /var/lib/hermes-broker/ledger.sqlite --journal /var/lib/hermes-broker/owned-units.sqlite --trusted-db /var/lib/hermes-agency/agency.db --key /etc/hermes-broker/signing.key --execute
+Restart=no
+TimeoutStopSec=20
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/run/hermes-broker /var/lib/hermes-broker
+ProtectHome=yes
+PrivateTmp=yes
