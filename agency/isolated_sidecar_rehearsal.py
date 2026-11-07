@@ -70,7 +70,7 @@ def _trusted_fixture(db, identity, operator_secret, credential_secret, job):
     return json.loads(raw)
 
 
-def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo):
+def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo, hold_callback=None):
     """Run actual operator_service child and IPC, then stop only that child."""
     if os.geteuid() != 0 or not folder.startswith("/run/hermes-staging/"):
         raise PermissionError("Isolated root staging only")
@@ -175,6 +175,10 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo)
         if request_operator(operator_socket, req) != "denied":
             raise AssertionError("Operator replay accepted")
         print("SIDECAR_OPERATOR_REPLAY_DENIED=PASS", flush=True)
+        if hold_callback is not None:
+            hold_request = _trusted_fixture(db, identity, operator_secret,
+                                            credential_secret, "identity")
+            hold_callback(operator_socket, hold_request)
     finally:
         if not child_reaped:
             try:
