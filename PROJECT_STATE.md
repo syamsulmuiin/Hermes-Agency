@@ -767,3 +767,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added agency/trusted_lease_ipc.py (57c6e7a, corrected acknowledgement ordering c722335) and tests/test_trusted_lease_ipc.py (a42cb6e). Protocol checks SO_PEERCRED root UID and signed grant, locks live trusted SQLite lease through job callback, acknowledges release only after transaction exits; disconnect triggers cleanup.
 - New IPC tests cover lock held through callback, disconnect releases lock, and revoked lease rejected before callback. Tests NOT YET EXECUTED on VPS.
 - IMPORTANT: This is an unconnected experimental primitive, NOT a deployable service or completed broker integration. It does not yet include socket filesystem ownership/lifecycle, broker-ledger replay wiring, bounded execution supervision or sidecar-crash job termination. The 10s socket timeout is not suitable for arbitrary job duration. No production runtime/service changes; production acceptance remains blocked.
+
+
+## IPC prototype regression evidence (2026-11-07)
+- Operator fast-forwarded VPS checkout ac97436 -> 18ffa31 and ran unittest modules test_trusted_lease_ipc, test_trusted_lease_fence, test_trusted_broker_socket, test_broker_grants.
+- Result: Ran 21 tests in 0.676s, OK, TEST_EXIT_CODE=0, no skips; 3 new IPC tests, 5 fencing, 6 broker socket, 7 broker grants passed.
+- This validates isolated callback lock lifetime and disconnect cleanup only. IPC remains unconnected to broker service, replay ledger, and real systemd execution; no production acceptance.
