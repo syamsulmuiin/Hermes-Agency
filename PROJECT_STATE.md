@@ -1215,3 +1215,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - `real_supervisor_failure_test --execute`: pending startup gate PASS both before and after SIGKILL; SQLite lock released after failed supervisor verification (reported 53 ms); independent systemd-triggered recovery verified after 121 ms; `real_supervisor_sigkill_independent_recovery=PASS`.
 - Sidecar `PermissionError: Supervisor failed before verification` is an expected fail-closed consequence of the injected crash, not a successful cleanup acknowledgement.
 - Evidence is for the isolated simulated supervisor only. Real new-launcher broker SIGKILL with an active systemd unit and its independent watchdog remains NOT VERIFIED. Production untouched.
+
+## New integrated staging broker SIGKILL acceptance fixture (2026-11-07)
+- Added `agency/real_integrated_staging_crash_test.py` on development branch (`0dfcb5d`, newline correction `e09ff1b`). **NOT YET EXECUTED ON VPS.**
+- Opt-in root-only `--execute` launches the actual `run_staging_session` with signed fixture grant, nonroot trusted peer and root broker. An injected fixed-job runner launches a real isolated transient `sleep` unit, confirms active, and holds broker alive for SIGKILL.
+- An independently managed temporary systemd watcher detects the broker's death and triggers OnFailure staging recovery. A test-controlled release marker permits deterministic assertion of pending startup denial before recovery, followed by verified unit stop, journal verification and startup gate reopening.
+- Test writes only isolated staging fixtures and temporary `hermes-integrated-*` systemd units; systemd daemon-reload is required for temporary units, but no production unit files, service controls, or production journal are touched. Failures remain unverified until VPS execution and diagnostics.
+- Still outstanding: launch/recovery concurrency acceptance and closing direct unfenced systemd bypass. No merge to main.
