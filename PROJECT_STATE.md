@@ -1008,3 +1008,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator ran at 707c742 and hit `SyntaxError` in `agency/trusted_lease_ipc.py` line 29: literal backslash-n sequences were accidentally written instead of actual newlines; exit 1 before test assertions.
 - Commit cf6b56e fixes the syntax and implements clean EOF handling after authenticated grant, requires configured cleanup, executes cleanup while transaction is held, and skips RELEASED response on disconnected socket. Prior EOF handling patch was incomplete. Needs compile check and VPS rerun; not yet verified.
 - Still NOT fail-closed on trusted sidecar crash, root supervisor crash, or cleanup failure; do not wire production.
+
+
+## Trusted sidecar IPC real VPS acceptance PASS (2026-11-07)
+- Operator ran `python3 -m py_compile agency/trusted_lease_ipc.py agency/real_trusted_lease_ipc_test.py`: `COMPILE_EXIT_CODE=0`.
+- Operator ran `python3 -m agency.real_trusted_lease_ipc_test --execute`: `trusted_sqlite_lock_held_during_job=PASS`, `trusted_lock_held_until_stop_verified=PASS`, `trusted_uid_ipc_systemd_stop_before_unlock=PASS`, `TRUSTED_IPC_EXIT_CODE=0`.
+- Proven scope: trusted non-root sidecar with private SQLite writer lock, broker socket EOF, cooperative root supervisor stop/verify of isolated real systemd unit, and SQLite lock availability only after verification. Test-only synthetic grant, no production approval or production service changes.
+- Remaining blockers: sidecar SIGKILL, supervisor SIGKILL, cleanup failure, independent watchdog and startup gating on failed cleanup. Do not claim crash-complete or production readiness.
