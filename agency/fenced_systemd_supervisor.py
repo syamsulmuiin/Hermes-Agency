@@ -26,30 +26,39 @@ def _systemctl(*args, timeout=5):
         raise PermissionError("Systemd unit control unavailable") from exc
 
 
-def stop_and_verify_unit(unit, *, deadline_seconds=5):
-    """Stop exact transient unit, require inactive/failed and no active job.
+def _verified_stopped_state(unit):
+    """Require systemd to report no active job or process, even if collected."""
+    state = _systemctl(
+        "show", unit, "--property=ActiveState",
+        "--property=SubState", "--property=Job", "--property=MainPID")
+    if state.returncode != 0:
+        raise PermissionError("Fenced systemd unit status unavailable")
+    fields = dict(line.split("=", 1) for line in state.stdout.decode(
+        "ascii", "replace").splitlines() if "=" in line)
+    return (fields.get("ActiveState") in ("inactive", "failed")
+            and fields.get("Job") in ("", "0")
+            and fields.get("MainPID") == "0")
 
-    If status cannot be established, fail closed; never report successful
-    cleanup when systemd may still be running the unit.
+
+def stop_and_verify_unit(unit, *, deadline_seconds=5):
+    """Verify unit stopped; stop it if necessary, including collected units.
+
+    systemd-run --collect can unload an already completed transient unit
+    before stop is requested. A failed stop is acceptable ONLY when systemd
+    independently confirms no active process or job. Unknown status fails
+    closed.
     """
     _unit_name(unit)
     if type(deadline_seconds) not in (int, float) or not 0 < deadline_seconds <= 15:
         raise ValueError("Invalid stop deadline")
+    if _verified_stopped_state(unit):
+        return True
     stop = _systemctl("stop", unit)
-    if stop.returncode != 0:
+    if stop.returncode != 0 and not _verified_stopped_state(unit):
         raise PermissionError("Fenced systemd unit stop failed")
     deadline = time.monotonic() + deadline_seconds
     while time.monotonic() < deadline:
-        state = _systemctl(
-            "show", unit, "--property=ActiveState",
-            "--property=SubState", "--property=Job", "--property=MainPID")
-        if state.returncode != 0:
-            raise PermissionError("Fenced systemd unit status unavailable")
-        fields = dict(line.split("=", 1) for line in state.stdout.decode(
-            "ascii", "replace").splitlines() if "=" in line)
-        if (fields.get("ActiveState") in ("inactive", "failed")
-                and fields.get("Job") in ("", "0")
-                and fields.get("MainPID") == "0"):
+        if _verified_stopped_state(unit):
             return True
         time.sleep(0.05)
     raise PermissionError("Fenced systemd unit still active or unverified")
