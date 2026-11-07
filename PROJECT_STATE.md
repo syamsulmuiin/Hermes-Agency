@@ -1037,3 +1037,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Real sidecar SIGKILL first VPS FAIL and targeted fix (2026-11-07)
 - Operator VPS: compile=0; `real_sidecar_sigkill_sqlite_unlock_delay_ms=2`; `real_sidecar_sigkill_pending_gate=PASS`; then `AssertionError: Independent recovery failed after real sidecar SIGKILL`, exit=1.
 - Root cause found in committed harness: test systemd watcher script still ran an infinite sleep loop and did not observe the real sidecar PID; thus `OnFailure` never triggered. Corrected watcher to poll the actual sidecar PID `/proc/<pid>/stat`, exit nonzero on process death/zombie, and added systemd/journal diagnostics on recovery timeout (commit fa17c5f). Actual VPS retest pending. Production unchanged.
+
+
+## Actual trusted sidecar SIGKILL VPS PASS (2026-11-07)
+- Operator ran `python3 -m py_compile agency/real_sidecar_sigkill_recovery_test.py`: `COMPILE_EXIT_CODE=0`.
+- Actual non-root sidecar SIGKILL acceptance returned `real_sidecar_sigkill_sqlite_unlock_delay_ms=2`, `real_sidecar_sigkill_pending_gate=PASS`, `real_sidecar_sigkill_systemd_recovery_delay_ms=122`, `real_sidecar_sigkill_independent_recovery=PASS`, `REAL_SIDECAR_EXIT_CODE=0`.
+- Verified in isolated test: SQLite writer lock releases before job stop, but pending ownership journal blocks startup; independent PID watcher/systemd OnFailure recovers the real transient job and verifies journal. These timings are from one VPS run, not a latency SLA.
+- Remaining real-component acceptance: actual root supervisor SIGKILL, real IPC cleanup failure, real service restart and gate serialization, and eventual production watchdog wiring. No production changes.
