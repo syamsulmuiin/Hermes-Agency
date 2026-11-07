@@ -1550,3 +1550,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - PASS markers: `CANDIDATE_REAL_OPERATOR_APPROVAL`, `CANDIDATE_SYSTEMD_SOCKET`, `CANDIDATE_EFFECTIVE_SYSTEMD_SANDBOX`, `SIDECAR_REAL_OPERATOR_SOCKET`, `SIDECAR_WRONG_SECRET_DENIED`, `SIDECAR_OPERATOR_TO_FENCED_BROKER`, `SIDECAR_OPERATOR_REPLAY_DENIED`, `CANDIDATE_SIGNED_GRANT`, `CANDIDATE_REPLAY_DENIED`, `CANDIDATE_TRUSTED_LEASE_LOCKED`, `CANDIDATE_SIGKILL_PENDING_GATE`, `CANDIDATE_SYSTEMD_RECOVERY`, `CANDIDATE_RESTART_AFTER_RECOVERY`, `PERSISTENT_CANDIDATE_ISOLATED_E2E`, `CANDIDATE_DISPOSABLE_ROLLBACK`.
 - Production `hermes-agency.service`, `hermes-signed-broker.service`, and `hermes-operator-sidecar.service` all remained **active**. No production cutover authorized.
 - Remaining limitation: sidecar-submitted `noop` and separate direct broker `identity` hold/SIGKILL exercise are not yet one single sidecar-originated hold-and-recovery scenario. A production route/cutover review and explicit authorization are still required.
+
+## Integrated sidecar-originated SIGKILL/recovery acceptance PASS (2026-11-07)
+- User-reported VPS run on candidate after `912dce6`: **316 unittest cases OK (1 skipped)** and `ACCEPTANCE_EXIT_CODE=0`.
+- PASS: `SIDECAR_HOLD_REQUEST_SUBMITTED`, `SIDECAR_HOLD_UNIT_ACTIVE`, `CANDIDATE_TRUSTED_LEASE_LOCKED`, `CANDIDATE_SIGKILL_PENDING_GATE`, `CANDIDATE_SYSTEMD_RECOVERY`, `CANDIDATE_RESTART_AFTER_RECOVERY`, `SIDECAR_HOLD_SIGKILL_RECOVERY`, `PERSISTENT_CANDIDATE_ISOLATED_E2E`, `CANDIDATE_DISPOSABLE_ROLLBACK`.
+- Also PASS: real operator approval, broker socket and effective sandbox, wrong-secret rejection, operator-to-broker IPC, replay rejection, signed-grant admission.
+- Production health checked after acceptance: `hermes-agency.service`, `hermes-signed-broker.service`, `hermes-operator-sidecar.service` all **active**. No production units, credentials, databases or sockets modified by this staging rehearsal.
+- Remaining: inspect production service wiring, actual deployed code and sidecar sandbox, restart/rollback runbook, and deployment gates before proposing any cutover. **Cutover not authorized**.
