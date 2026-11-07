@@ -721,3 +721,12 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator ran transient systemd test with dummy SQLite and dummy key under `/run`, `ProtectSystem=strict`, `ReadWritePaths=<temporary dir>`, `InaccessiblePaths=<temporary dir>/keys`, `NoNewPrivileges=yes`, and bounded capabilities. Observed `KEY_ISOLATION=PASS`, `SQLITE_BEGIN_IMMEDIATE=PASS`, `CONCURRENT_WRITER_BLOCKED=PASS`, `SQLITE_COMMIT=PASS`, `ISOLATED_SANDBOX_TEST=PASS`, exit 0.
 - This confirms isolated mount masking and SQLite writer exclusion only; does not validate production key paths, actual broker signed-grant, replay handling, or live lease fencing. No production unit modified. Source review: `systemd_broker.execute_signed_grant` locks trusted DB with `BEGIN IMMEDIATE` and rolls back after job, while `SecureAgencyStore` uses `BEGIN IMMEDIATE` for claim/transition. This is the intended contention boundary, not yet an E2E acceptance result.
 - Next: add regression tests for lease-revocation contention and replay, validate production-equivalent sandbox in isolated fixture, then explicitly review narrow production rollout. Longer term move lease fencing into trusted UID process to avoid granting root broker broad trusted DB write access.
+
+
+## Production non-destructive acceptance (2026-11-07 01:59:42 UTC)
+- Operator executed /root/hermes-full-acceptance.sh; report /root/hermes-acceptance-20261107T015942Z.log.
+- Repository checkout at 82acc07 (older than latest branch documentation commits); git status --short empty. Unit tests: 218 OK, 1 skipped; expected CLI parser negative-path stderr emitted during tests.
+- Main, signed broker, and operator sidecar services all active. Broker and operator optional services disabled at boot, Restart=no, NRestarts=0.
+- Broker socket 0660 root:hermes-trusted, operator socket 0600 hermes-trusted:hermes-trusted. Worker denied both socket connections. Invalid operator credential denied. Isolated SQLite BEGIN IMMEDIATE competing-writer exclusion and commit passed.
+- Acceptance summary: FAILURES=0, FULL_NONDESTRUCTIVE_ACCEPTANCE=PASS, ACCEPTANCE_EXIT_CODE=0.
+- Scope limitation: no real positive approved signed-grant, replay or expired-grant, revocation race, real systemd fixed job, or audit ledger E2E tested. No production restart, DB mutation, or boot-policy changes performed by this acceptance script. Production readiness is NOT yet approved.
