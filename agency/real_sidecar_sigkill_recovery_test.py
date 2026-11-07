@@ -73,9 +73,16 @@ def run():
         # Recovery is systemd-owned; coordinator SIGKILL is not required for
         # recovery and cannot mark journal verified itself.
         with open(worker,"w",encoding="utf-8") as f:
-            f.write("import sys,time\nsys.path.insert(0,"+repr(repo)+")\n"
+            f.write("import os,sys,time\n"
                     "open("+repr(ready)+",'x').write('ready')\n"
-                    "while True: time.sleep(1)\n")
+                    "while not os.path.isfile("+repr(pidfile)+"): time.sleep(.05)\n"
+                    "pid=int(open("+repr(pidfile)+").read())\n"
+                    "while True:\n"
+                    " try:\n"
+                    "  state=open('/proc/%d/stat'%pid).read().split(') ',1)[1].split()[0]\n"
+                    "  if state in ('Z','X'): sys.exit(1)\n"
+                    " except FileNotFoundError: sys.exit(1)\n"
+                    " time.sleep(.05)\n")
         with open(recover,"w",encoding="utf-8") as f:
             f.write("import sys\nsys.path.insert(0,"+repr(repo)+")\n"
                     "from agency.fenced_unit_journal import recover_owned_units\n"
@@ -145,6 +152,11 @@ def run():
                     print("real_sidecar_sigkill_independent_recovery=PASS",flush=True)
                     return
                 time.sleep(.1)
+            for name in (watched,recovery,unit):
+                result=ctl("show",name,"--property=ActiveState,SubState,Result,ExecMainStatus")
+                print("diagnostic_"+name+"="+result.stdout.decode(errors="replace").strip().replace("\\n",";"),flush=True)
+            with sqlite3.connect(journal) as db:
+                print("diagnostic_journal="+repr(db.execute("SELECT unit,state FROM owned_units").fetchall()),flush=True)
             raise AssertionError("Independent recovery failed after real sidecar SIGKILL")
         finally:
             parent.close()
