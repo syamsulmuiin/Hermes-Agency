@@ -193,7 +193,7 @@ def execute_signed_grant(db_path, envelope, verification_key,
 
 def execute_fenced_signed_grant(db_path, envelope, verification_key,
                                 fence_socket_path, executor=run_systemd_job,
-                                now=None):
+                                now=None, supervised_executor=None):
     """Opt-in broker ledger + trusted sidecar fence, never writes trusted DB.
 
     This function is not connected to the production socket listener.
@@ -236,7 +236,15 @@ def execute_fenced_signed_grant(db_path, envelope, verification_key,
             try:
                 # Do not impose the handshake timeout on the fixed job.
                 fence.settimeout(None)
-                result = executor(claims["job"])
+                if supervised_executor is None:
+                    result = executor(claims["job"])
+                else:
+                    # A supervisor receives the live fence FD and a unique,
+                    # grant-derived unit identity; no client-provided unit.
+                    # It MUST stop and verify any launched unit on EOF/error.
+                    from .fenced_systemd_supervisor import supervised_fenced_unit
+                    result = supervised_fenced_unit(
+                        claims["job"], claims["id"], fence, supervised_executor)
                 # An uncertain fence completion is a failed attempt, never
                 # a successful broker response or an opportunity to replay.
                 _send(fence, {"status": "done", "grant_id": claims["id"]})
