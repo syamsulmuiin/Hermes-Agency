@@ -938,3 +938,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator ran `python3 -m agency.real_systemd_startup_gate_test --execute` after pulling 936848a.
 - Output: `real_execstartpre_failure_blocks_execstart=PASS`, then `RuntimeError: Gate success failed to start test service`; `STARTUP_GATE_EXIT_CODE=1`. Thus startup denial verified, subsequent allow/start NOT verified.
 - Commit f581113 adds diagnostic stderr and `systemctl status --no-pager --full` for the failing test unit; does not relax gate or change production. Needs VPS rerun with diagnostic output. Trusted IPC and automatic recovery still pending.
+
+
+## Real startup gate failure diagnosed: 203/EXEC (2026-11-07)
+- VPS diagnostic rerun exited 1. systemd status: `ExecStartPre=/run/hermes-gate-.../gate (code=exited, status=203/EXEC)`; test's earlier `real_execstartpre_failure_blocks_execstart=PASS` was a false-positive for intended gate logic (only verified ExecStart did not run). Exact 203/EXEC cause unconfirmed; /run execution restrictions possible.
+- Commit b32a18c invokes gate as `/bin/sh <private-test-script>` and rejects 203/EXEC explicitly. Pending VPS retest; not yet PASS. Production untouched.
