@@ -996,3 +996,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Trusted IPC second VPS run: lock PASS, EOF timeout (2026-11-07)
 - At 7a77a85, operator observed `trusted_sqlite_lock_held_during_job=PASS` then root supervisor `TimeoutError` waiting for sidecar `stop` after broker socket close; overall exit 1.
 - Diagnosis: Linux multiprocessing fork duplicates both ends of each socketpair into child, preventing broker EOF delivery. Commit 4002942 explicitly closes inherited broker and supervisor endpoints in sidecar child before UID drop. Requires VPS rerun. Stop-before-unlock remains NOT VERIFIED; production unchanged.
+
+
+## Trusted IPC third VPS run: lock held through stop verification PASS; EOF framing fix (2026-11-07)
+- Operator ran at 08c81b6: `trusted_sqlite_lock_held_during_job=PASS`, `trusted_lock_held_until_stop_verified=PASS`, then sidecar raised `PermissionError: Invalid lease IPC framing` after expected clean broker EOF, so overall exit 1.
+- Commits 0b36d91 and ee91837 update IPC reader to recognize clean EOF only when explicitly allowed after signed grant admission, perform trusted cleanup, skip writing RELEASED to disconnected broker, and reject disconnect if no trusted cleanup callback. Partial/malformed frames remain rejected. Needs VPS rerun.
+- Still not fail-closed against trusted sidecar or supervisor death, or cleanup callback failure; independent systemd watchdog remains necessary. Production untouched.
