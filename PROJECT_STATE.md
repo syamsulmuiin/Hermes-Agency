@@ -1334,3 +1334,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## First isolated candidate runtime failure and fix (2026-11-07)
 - VPS test showed `CANDIDATE_SYSTEMD_SOCKET=PASS` but first grant rejected (`PermissionError`), exit 1; both production services remained active.
 - Found acceptance fixture grant expiry `iat+120`, violating verifier hard limit `exp-iat <= 60`. Changed fixture TTL to 60 seconds in commit `5bf20ca`, without relaxing grant validation. Must rerun to establish whether any further issues remain.
+
+## Third isolated candidate execution (2026-11-07)
+- Observed socket PASS, valid signed grant PASS, replay denied PASS, then hold unit never became active (exit 1); both production services remained active.
+- Added read-only failure diagnostics for transient unit, broker systemd status, isolated journal and ledger (`529da4b`). No hold/SIGKILL/recovery acceptance has passed yet; root cause awaits runtime diagnostic output.
