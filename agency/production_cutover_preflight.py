@@ -44,7 +44,7 @@ def preflight():
 
     for label, path in (
         ("ownership journal", "/var/lib/hermes-broker/owned-units.sqlite"),
-        ("admission lock", "/run/hermes-operator/admission.lock"),
+        ("admission lock", "/run/hermes-admission/admission.lock"),
     ):
         if not os.path.isfile(path) or os.path.islink(path):
             problems.append(label + " not provisioned and verified")
