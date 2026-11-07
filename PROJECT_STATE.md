@@ -693,3 +693,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Production unsigned request rejection (2026-11-07)
 - As `hermes-trusted`, connection to `/run/hermes-broker/broker.sock` succeeded. Sending `{"grant":{}}\n` returned EOF (`b''`); broker journal logged `{"broker":"denied","reason":"PermissionError"}`. Broker and main service remained active.
 - This validates one malformed/unsigned request rejection, not replay/expiry/forgery or valid signed grant acceptance. Next test operator sidecar startup and socket identity under temporary `Restart=no`, then explicit controlled signed grant end-to-end.
+
+
+## Production operator sidecar startup acceptance (2026-11-07 01:49 UTC)
+- Production operator state/DB/key/verifier metadata: trusted-owned private dirs 0700, DB/verifier 0600; broker key 0640 root:hermes-trusted and 64 bytes. Unit uses `User=hermes-trusted`, `Group=hermes-trusted`.
+- Temporary `/run/systemd/system/hermes-operator-sidecar.service.d/90-startup-test.conf` sets `Restart=no`. Operator started successfully PID 995055, `ActiveState=active`, `SubState=running`, `NRestarts=0`; `/run/hermes-operator/operator.sock` 0600 hermes-trusted:hermes-trusted, listening. Broker and main service also active.
+- Next: verify operator socket rejects worker/root unauthorized protocol, then controlled valid authentication and signed-grant ledger acceptance. Keep both optional units disabled at boot, `Restart=no` until production acceptance.
