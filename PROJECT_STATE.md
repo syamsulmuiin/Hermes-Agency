@@ -1209,3 +1209,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Real staging launcher emitted PASS for signed grant/nonroot trusted peer, stop-before-release, and startup gate after recovery. This validates normal staging end-to-end only.
 - Remaining acceptance: real new-launcher broker SIGKILL while its systemd unit is active, independently systemd-triggered journal recovery, startup denial while pending, concurrent launch/recovery race, and direct unfenced systemd bypass closure. Existing `real_supervisor_failure_test.py` uses a separate simulated supervisor, not the new staging launcher; do not conflate its evidence.
 - No production service changes or main-branch merge authorized.
+
+## Isolated supervisor SIGKILL acceptance verified on VPS (2026-11-07)
+- VPS at `97a32f6`: `CRASH_EXIT=0`, `PRODUCTION_SERVICE_EXIT=0` (`active`).
+- `real_supervisor_failure_test --execute`: pending startup gate PASS both before and after SIGKILL; SQLite lock released after failed supervisor verification (reported 53 ms); independent systemd-triggered recovery verified after 121 ms; `real_supervisor_sigkill_independent_recovery=PASS`.
+- Sidecar `PermissionError: Supervisor failed before verification` is an expected fail-closed consequence of the injected crash, not a successful cleanup acknowledgement.
+- Evidence is for the isolated simulated supervisor only. Real new-launcher broker SIGKILL with an active systemd unit and its independent watchdog remains NOT VERIFIED. Production untouched.
