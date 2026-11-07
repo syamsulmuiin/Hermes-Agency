@@ -1458,3 +1458,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Trusted-only fenced route seam (2026-11-07)
 - Added `agency/fenced_trusted_route.py` (`e28bee3`) as non-root in-process fixed-endpoint delegation to existing `TrustedAgentExecution.execute_operator_approved_job`; no new socket, CLI, credentials, or worker permissions. Added unit tests (`8e86a71`) for root/endpoint rejection and delegation. VPS tests pending.
 - This seam is NOT wired into live trusted operator ingress, and mock delegation tests are NOT real approved-grant E2E. Existing isolated broker+PID1 recovery PASS remains valid. Final cutover inspection is NO-GO pending operator ingress wiring, end-to-end real approval test and manifest audit; production unchanged.
+
+## VPS trusted route unit test results (2026-11-07)
+- Operator pulled `4508173`: four `tests.test_fenced_trusted_route` cases PASS; full discovery 308 tests OK (skipped=1), exit 0, both production services active. CLI argparse error output during suite is expected negative-path stderr, not a suite failure.
+- This validates only non-root fixed-endpoint routing seam via mocked delegation, NOT real approval issuance, broker submission, active production ingress, or cutover. The isolated systemd broker/recovery acceptance previously passed separately. Continue trusted operator ingress and end-to-end staging integration before any production mutation.
