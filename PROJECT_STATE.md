@@ -1267,3 +1267,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Full `python3 -m unittest discover -s tests -q`: 279 tests OK (1 skipped), exit 0. CLI `usage:` output is expected from negative CLI validation cases.
 - `hermes-agency.service` and `hermes-signed-broker.service` both remained `active`. No production changes.
 - Follow-on source review confirms `staging_broker_job` is staging-only, requires isolated journal and trusted peer, while live root `supervised_broker.serve_forever` still calls `handle_signed_connection` with unfenced `execute_signed_grant` default. Existing staging launcher forks peer and starts root stop controller; a production cutover requires a separately validated deployment design for persistent broker, peer, journal and independent recovery. No production-ready cutover implemented yet.
+
+## Consolidated validation (2026-11-07)
+- Added `agency/final_staging_acceptance.py` to run unit suite, isolated integrated crash suite, multiprocess race acceptance, integrated real staging SIGKILL recovery and production service active-state checks in one opt-in command (`python3 -m agency.final_staging_acceptance --execute`). This is a STAGING acceptance runner only; it creates temporary systemd test units and has not been run on VPS. It does not modify production units.
+- User requests no incremental VPS test cycles. Hold VPS requests until a cohesive production broker integration is ready; do not interpret staging runner as completed production cutover.
+- Still missing: root broker production listener -> fenced journal-backed supervisor, independent watchdog/recovery and startup gate, plus production-equivalent signed grant acceptance and rollback. No claim of production bypass closure.
