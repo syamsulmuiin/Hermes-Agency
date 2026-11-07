@@ -1308,3 +1308,7 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Consolidated candidate preflight (2026-11-07)
 - Added read-only `agency.fenced_candidate_preflight` to validate candidate systemd service entrypoints, exact journal and socket paths, pre-start gate, OnFailure recovery and no automatic restart. Integrated into `agency.final_staging_acceptance` as its first scenario. Added `tests/test_fenced_candidate_preflight.py`.
 - Static preflight is NOT a live systemd/crash acceptance; no VPS execution has been observed. The candidate still requires isolated runtime crash/race acceptance and review of systemd sandbox permissions and recovery ordering before production cutover. Production unchanged.
+
+## Candidate socket regression (2026-11-07)
+- Added `tests/test_fenced_candidate_socket.py` for a local Unix socket request/response round trip against `serve_candidate`, with identity, permissions, signed-grant and session dependencies mocked; no real root or systemd execution. Commits `c824225`, `ccd55cd`.
+- This is NOT an end-to-end signed grant + trusted lease + systemd crash test. No test run on VPS is evidenced; do not claim candidate acceptance or production readiness. Existing production service unchanged.
