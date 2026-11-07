@@ -39,6 +39,7 @@ class RealSocketCutoverAdapter(IsolatedSystemdAdapter):
         self.grant = grant
         self.grant_id = grant["claims"]["id"]
         self.broker = None
+        self.broker_log = None
 
     def _submit(self):
         request = json.dumps({"grant": self.grant}, separators=(",", ":"))
@@ -54,6 +55,7 @@ class RealSocketCutoverAdapter(IsolatedSystemdAdapter):
     def start_new(self):
         if self.broker is not None:
             raise AssertionError("Candidate already started")
+        self.broker_log = open(os.path.dirname(self.socket_path) + "/candidate.log", "ab", buffering=0)
         self.broker = subprocess.Popen(
             [sys.executable, "-m", "agency.fenced_broker_candidate",
              "--socket", self.socket_path, "--trusted-user", self.identity.pw_name,
@@ -61,8 +63,8 @@ class RealSocketCutoverAdapter(IsolatedSystemdAdapter):
              "--trusted-db", self.database, "--key", self.key_path,
              "--execute", "--isolated-test"],
             cwd=os.path.dirname(os.path.dirname(__file__)),
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL)
+            stdin=subprocess.DEVNULL, stdout=self.broker_log,
+            stderr=subprocess.STDOUT)
         wait_socket(self.socket_path, self.broker)
         self._inject("start_new")
 
@@ -70,7 +72,9 @@ class RealSocketCutoverAdapter(IsolatedSystemdAdapter):
         self._inject("replay_probe")
         response = self._submit()
         if not response.startswith("{") or json.loads(response).get("exit_code") != 0:
-            raise AssertionError("Real candidate did not execute signed grant: " + response)
+            with open(os.path.dirname(self.socket_path) + "/candidate.log", "rb") as log:
+                detail = log.read()[-3000:].decode("utf-8", "replace")
+            raise AssertionError("Real candidate did not execute signed grant: " + response + "\\nCandidate diagnostic: " + detail)
         self.consumed.add(self.grant_id)
         if self._submit() != "DENIED_NO_REPLY":
             raise AssertionError("Real socket accepted replay")
@@ -105,6 +109,9 @@ class RealSocketCutoverAdapter(IsolatedSystemdAdapter):
             self.broker = None
         if os.path.lexists(self.socket_path):
             os.unlink(self.socket_path)
+        if self.broker_log is not None:
+            self.broker_log.close()
+            self.broker_log = None
 
     def rollback(self):
         self._inject("rollback")
