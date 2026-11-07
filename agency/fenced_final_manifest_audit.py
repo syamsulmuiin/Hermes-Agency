@@ -17,7 +17,7 @@ def read(path):
     parser.read(path)
     return parser
 
-def audit():
+def audit(expected_pin=PINNED):
     broker, recovery = read(BROKER), read(RECOVERY)
     problems = []
     def check(condition, name):
@@ -25,8 +25,8 @@ def audit():
             problems.append(name)
     b, r = broker["Service"], recovery["Service"]
     bu, ru = broker["Unit"], recovery["Unit"]
-    check(b.get("WorkingDirectory") == PINNED, "broker pinned deployment path")
-    check(r.get("WorkingDirectory") == PINNED, "recovery pinned deployment path")
+    check(b.get("WorkingDirectory") == expected_pin, "broker pinned deployment path")
+    check(r.get("WorkingDirectory") == expected_pin, "recovery pinned deployment path")
     check(b.get("User") == "root" and r.get("User") == "root", "root ownership")
     check(b.get("ProtectSystem") == "strict" and r.get("ProtectSystem") == "strict", "strict filesystem sandbox")
     check(b.get("ProtectHome") == "yes" and r.get("ProtectHome") == "yes", "home protection")
@@ -60,8 +60,12 @@ def audit():
 
 def main(argv=None):
     parser = argparse.ArgumentParser()
-    parser.parse_args(argv)
-    if not audit():
+    parser.add_argument("--expected-pin", default=PINNED,
+                        help="Expected absolute candidate snapshot path")
+    args = parser.parse_args(argv)
+    if not args.expected_pin.startswith("/opt/hermes-fenced-") or args.expected_pin.endswith("/"):
+        parser.error("--expected-pin must be an absolute /opt/hermes-fenced-* path")
+    if not audit(args.expected_pin):
         raise SystemExit(2)
 
 if __name__ == "__main__":
