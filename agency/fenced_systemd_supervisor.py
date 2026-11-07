@@ -53,3 +53,31 @@ def stop_and_verify_unit(unit, *, deadline_seconds=5):
             return True
         time.sleep(0.05)
     raise PermissionError("Fenced systemd unit still active or unverified")
+
+
+def supervised_fenced_unit(job, grant_id, fence_socket, runner):
+    """Broker-side lifecycle boundary for an opt-in fixed-unit runner.
+
+    The runner must monitor fence EOF while systemd-run is in progress and
+    return only after the transient unit is no longer running. This wrapper
+    verifies cleanup on both success and failure, and never reports success
+    when stop/status verification fails. Not production-wired.
+    """
+    import hashlib
+    from .systemd_jobs import JOBS
+    if type(job) is not str or job not in JOBS:
+        raise PermissionError("Job not allowlisted")
+    if (type(grant_id) is not str or len(grant_id) != 64
+            or any(ch not in "0123456789abcdef" for ch in grant_id)):
+        raise PermissionError("Invalid signed grant identity")
+    if not callable(runner):
+        raise TypeError("Supervised unit runner required")
+    unit = "hermes-fenced-" + hashlib.sha256(
+        grant_id.encode("ascii")).hexdigest()[:32] + ".service"
+    try:
+        result = runner(job, fence_socket, unit)
+    except BaseException:
+        stop_and_verify_unit(unit)
+        raise
+    stop_and_verify_unit(unit)
+    return result
