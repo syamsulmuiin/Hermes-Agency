@@ -954,3 +954,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Journal-backed startup gate foundation (2026-11-07)
 - Commit 14c8c28 adds `agency/fenced_startup_gate.py` with root-only, read-only fail-closed `require_recovered(journal)`; rejects missing journal, invalid unit/state, or any pending ownership. No recovery or job launch occurs inside the gate.
 - This is NOT wired to real test systemd ExecStartPre yet and has NOT been VPS-tested. Independent automatic recovery after SIGKILL and real trusted UID lease IPC end-to-end remain open. No production modifications.
+
+
+## Real systemd gate now connected to isolated durable journal (2026-11-07)
+- Commits b3e42a8 and 5b92f53 update `agency/real_systemd_startup_gate_test.py`: `ExecStartPre` invokes `agency.fenced_startup_gate` against a private `/run/hermes-gate-*/owned.sqlite` journal. A pending row must block `ExecStart`; test-only direct transition to verified then permits `ExecStart`. The test does NOT launch an actual pending unit or run recovery; the verified transition is simulated. No production service modifications.
+- This updated integration has NOT been tested on VPS. Independent automatic recovery and actual trusted lease IPC with SQLite remain unimplemented. Next: real recovery ordering and sidecar lifetime coupling, then end-to-end acceptance.
