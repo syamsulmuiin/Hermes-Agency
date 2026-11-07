@@ -95,7 +95,7 @@ def run():
         os.mkdir(trusted_dir, 0o700)
         os.chown(trusted_dir, identity.pw_uid, identity.pw_gid)
         dbpath = trusted_dir + "/agency.sqlite"
-        marker = base + "/allow-hold-test"
+        marker = folder + "/allow-hold-test"
         if os.path.lexists(marker):
             raise PermissionError("Shared test hold marker already exists")
         key = secrets.token_bytes(64)
@@ -138,7 +138,7 @@ def run():
                      "After=" + recovery_unit + "\nRequires=" + recovery_unit
                      + "\nOnFailure=" + recovery_unit
                      + "\n[Service]\nType=simple\nUser=root\n"
-                     "WorkingDirectory=" + repo + "\nExecStartPre=" + python
+                     "WorkingDirectory=" + repo + "\nEnvironment=HERMES_ISOLATED_HOLD_MARKER=" + marker + "\nExecStartPre=" + python
                      + " -m agency.fenced_startup_gate --journal " + journal
                      + "\nExecStart=" + broker_command
                      + "\nExecStopPost=" + recovery_command
