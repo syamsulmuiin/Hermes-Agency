@@ -1287,3 +1287,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - `agency/fenced_staging_broker.staging_broker_job` now accepts an optional root ledger; when supplied it consumes the grant under staging launch serialization before work and marks completed only after stop-verified recovery. Existing staging calls without a ledger are unchanged.
 - Added `tests/test_fenced_grant_ledger.py` for replay, completed, and failed cases. Changes have NOT been tested on VPS. This is an incremental integration building block, not production listener/watchdog wiring.
 - Next: compose a persistent signed-grant broker with trusted UID peer, production-safe journal path, independent watchdog/recovery, startup ordering and acceptance. Do not modify `/opt/hermes-agency` until complete.
+
+## End-to-end cutover readiness checkpoint (2026-11-07)
+- User requests a single cohesive completion and one VPS acceptance cycle, not incremental test requests.
+- Commit `109d8b6` forwards optional root replay ledger from `run_staging_session` into `staging_broker_job`; existing callers remain unchanged.
+- NOT READY FOR PRODUCTION: persistent root broker listener still defaults to unfenced `handle_signed_connection`; staging runner is per-grant and has no production independent watchdog or startup recovery service deployment. Strict `--require-fenced` deliberately rejects startup. No systemd service files changed.
+- Required before a single acceptance run: implement persistent fenced signed socket broker, trustworthy root-to-trusted lease fence lifetime, replay-proof grant admission, journal-backed unit lifecycle, independent recovery unit/OnFailure or equivalent, startup recovery gate, production-equivalent crash tests, and documented rollback. Then run one consolidated VPS acceptance suite, and only after explicit approval consider cutover.
