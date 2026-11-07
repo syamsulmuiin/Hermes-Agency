@@ -664,3 +664,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - User installed broker and operator unit templates unchanged to `/etc/systemd/system/hermes-signed-broker.service` and `/etc/systemd/system/hermes-operator-sidecar.service`; `cmp` and `systemd-analyze verify` succeeded, followed by `systemctl daemon-reload`.
 - Both optional units verified `disabled` and `inactive`; main `hermes-agency.service` active; `SYSTEMD_UNIT_INSTALLATION=PASS`.
 - Next: start broker only under explicit controlled test, verify root process and socket permissions and absence of startup errors, then operator sidecar and negative-access tests. Do not enable at boot until full production acceptance.
+
+
+## Production runtime regression observed (2026-11-07)
+- Earlier runtime overlay verification passed (11 installed and imported), but broker startup entered restart loop (`No module named agency.supervised_broker`, `NRestarts=31`). User stopped broker; main service remains active, broker/operator inactive.
+- Read-only inventory now finds `trusted_execution.py` present but **all 10 optional runtime modules missing** from `/opt/hermes-agency/agency`; directory and `trusted_execution.py` mtimes around `2026-11-07 01:37:52 UTC`. Cause of removal not yet established. Do not claim environment/PYTHONPATH is cause; direct import returned NOT_FOUND.
+- Next: investigate deployment/cleanup processes and compare `trusted_execution.py` with repository and backup before controlled reinstallation. Do not restart main service, rerun credential provisioning, or activate optional units until root cause and runtime integrity are checked.
