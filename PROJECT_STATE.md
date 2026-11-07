@@ -1293,3 +1293,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Commit `109d8b6` forwards optional root replay ledger from `run_staging_session` into `staging_broker_job`; existing callers remain unchanged.
 - NOT READY FOR PRODUCTION: persistent root broker listener still defaults to unfenced `handle_signed_connection`; staging runner is per-grant and has no production independent watchdog or startup recovery service deployment. Strict `--require-fenced` deliberately rejects startup. No systemd service files changed.
 - Required before a single acceptance run: implement persistent fenced signed socket broker, trustworthy root-to-trusted lease fence lifetime, replay-proof grant admission, journal-backed unit lifecycle, independent recovery unit/OnFailure or equivalent, startup recovery gate, production-equivalent crash tests, and documented rollback. Then run one consolidated VPS acceptance suite, and only after explicit approval consider cutover.
+
+## Independent recovery candidate (2026-11-07)
+- Added `agency/fenced_owned_recovery.py`: root-only exclusive-lock journal recovery followed by read-only startup gate verification; no job launch. Added `tests/test_fenced_owned_recovery.py` for ordering/fail-closed checks.
+- Added **inactive candidate** `deploy/systemd/hermes-fenced-recovery-candidate.service` invoking generic recovery against `/var/lib/hermes-broker/owned-units.sqlite`. This is NOT installed or enabled; a production-ready broker unit, `OnFailure` orchestration, startup gate, journal provisioning, sandbox/systemd control verification and real crash tests are still missing. The unit file alone provides no watchdog guarantee.
+- Latest branch commit `f48c76e`. Tests not run on VPS. Do not cut over or claim ready.
