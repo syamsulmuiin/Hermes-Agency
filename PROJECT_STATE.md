@@ -676,3 +676,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - User verified `SOURCE_MODULES=PASS`, three backup SHA256 checks OK, and main/broker/operator states active/inactive/inactive.
 - After running the recovery procedure, a separate-shell production import check returned `MODULE_PERSISTENCE=PASS` for `agency.supervised_broker` and `agency.operator_service`; module inventory again shows optional broker/operator modules present. Main service remained active, optional services inactive.
 - Recovery script's own `RUNTIME_RECOVERY=PASS` output was not supplied, so do not assert that specific marker. Next step: one-shot controlled broker startup with `Restart=no` runtime override, verify socket/service and journal, then remove override. Do not enable at boot until end-to-end signed-grant and operator checks pass.
+
+
+## Production broker listener acceptance (2026-11-07 01:46 UTC)
+- With a temporary `/run/systemd/system/hermes-signed-broker.service.d/90-startup-test.conf` override `Restart=no`, broker starts successfully: `ActiveState=active`, `SubState=running`, `MainPID=994337`, `NRestarts=0`, root process.
+- `/run/hermes-broker/broker.sock` exists, mode 0660, owner root:hermes-trusted; parent `/run/hermes-broker` mode 0710; `ss -xlpn` confirms broker process listening. Main Hermes remains active. This verifies startup/listener only, not signed grant security or operator sidecar.
+- Next: test unauthorized peer rejection and authorized signed request in controlled scope, verify ledger/DB and no unauthorized systemd jobs, then operator sidecar. Keep `Restart=no` and optional units disabled until end-to-end acceptance.
