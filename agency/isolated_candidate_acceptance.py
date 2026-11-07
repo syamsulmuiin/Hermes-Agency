@@ -302,17 +302,17 @@ def run(*, deployed=None):
                 # Resolve the running unit by its staging journal instead.
                 def sidecar_crash(operator_socket, hold_request):
                     sidecar_hold(operator_socket, hold_request)
-                    if not until(lambda: bool(sqlite3.connect(journal).execute(
-                            "SELECT unit FROM owned_units").fetchall()), 15):
-                        raise AssertionError("Sidecar hold not journaled")
-                    with sqlite3.connect(journal) as connection:
-                        rows = connection.execute("SELECT unit FROM owned_units").fetchall()
-                    if len(rows) != 1:
-                        raise AssertionError("Unexpected sidecar-owned unit count")
-                    if not until(lambda: active(rows[0][0]), 15):
+                    def pending_units():
+                        with sqlite3.connect(journal) as connection:
+                            return [row[0] for row in connection.execute(
+                                "SELECT unit FROM owned_units WHERE state='pending'")]
+                    if not until(lambda: len(pending_units()) == 1, 15):
+                        raise AssertionError("Sidecar pending hold not journaled uniquely")
+                    pending = pending_units()
+                    if not until(lambda: active(pending[0]), 15):
                         raise AssertionError("Sidecar-originated hold unit not active")
                     print("SIDECAR_HOLD_UNIT_ACTIVE=PASS", flush=True)
-                    crash_and_recover(rows[0][0], sidecar_origin=True)
+                    crash_and_recover(pending[0], sidecar_origin=True)
                 run_sidecar_rehearsal(folder, dbpath, keypath, sock,
                                      identity, repo, hold_callback=sidecar_crash)
             else:
