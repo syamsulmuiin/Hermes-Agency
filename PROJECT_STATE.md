@@ -784,3 +784,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled branch development/foundation to 2c06c40 on VPS and ran 4 unittest modules: trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants.
 - Result: Ran 21 tests in 0.598s, OK, TEST_EXIT_CODE=0 (3 IPC, 5 fence, 6 broker socket, 7 grants). No production service changes reported.
 - Important limitation: these tests do NOT exercise a job lasting >10 seconds; timeout fix has no direct long-running regression test yet. IPC remains experimental and unconnected to production broker/ledger. Crash safety and real noop acceptance remain pending.
+
+
+## Expanded IPC negative/long-job regression tests (2026-11-07)
+- Added tests/test_trusted_lease_ipc_long_job.py (6c07a3e): fake job sleeps 10.25 seconds, asserts SQLite revocation is still blocked and lock releases after completion. No production job is run.
+- Extended tests/test_trusted_lease_ipc.py (6d17698): reject incorrect SO_PEERCRED root UID and malformed completion; ensure lock released after malformed completion.
+- These 3 new cases are NOT YET EXECUTED on VPS. Production broker/ledger integration and crash-safe systemd job supervision are still missing. Do not deploy or claim production acceptance.
