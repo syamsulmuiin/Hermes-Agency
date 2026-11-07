@@ -854,3 +854,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Commit af87e6f: added agency/fenced_unit_recovery.py. Root-only opt-in recovery enumerates loaded hermes-fenced-<32hex>.service units, rejects malformed names or failed enumeration, stops and verifies each via existing systemd guard, fails closed on any unsuccessful cleanup. Requires externally assured broker_stopped=True; never accesses trusted SQLite or issues grants.
 - Commit 4da6919: added six mocked recovery tests. NOT YET RUN on VPS.
 - Critical integration pending: no independent recovery service/unit is installed, no systemd broker stop/start ordering or restart gate is enforced, and no broker crash injection test has been performed. Passing broker_stopped=True alone is not a proof the broker is stopped; only trusted external orchestration may supply it. Do not enable production or run real noop yet.
+
+
+## Independent fenced-unit recovery suite verified on VPS (2026-11-07)
+- Operator pulled development/foundation to 679560e and ran nine unittest modules: fenced_unit_recovery, fenced_broker_unit_lifecycle, fenced_systemd_supervisor, fence_process_supervisor, fenced_broker_ledger, trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants.
+- Result: 43 tests in 1.134s, OK, TEST_EXIT_CODE=0. All six mocked recovery tests passed; no duplicate test discovery.
+- No real broker crash, transient unit execution, independent systemd recovery service or startup/shutdown gate was exercised. Production remains unchanged and real noop acceptance blocked pending independent orchestration and isolated crash tests.
