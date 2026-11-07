@@ -19,10 +19,9 @@ class FencedSystemdSupervisorTests(unittest.TestCase):
 
     @patch("agency.fenced_systemd_supervisor._systemctl")
     def test_stop_requires_inactive_no_job_no_pid(self, call):
-        call.side_effect = [
-            reply(), reply(output=b"ActiveState=inactive\nSubState=dead\nJob=\nMainPID=0\n")]
+        call.return_value = reply(output=b"ActiveState=inactive\nSubState=dead\nJob=\nMainPID=0\n")
         self.assertTrue(stop_and_verify_unit(UNIT))
-        self.assertEqual(call.call_count, 2)
+        self.assertEqual(call.call_count, 1)
 
     @patch("agency.fenced_systemd_supervisor._systemctl")
     def test_stop_failure_denied(self, call):
@@ -32,14 +31,14 @@ class FencedSystemdSupervisorTests(unittest.TestCase):
 
     @patch("agency.fenced_systemd_supervisor._systemctl")
     def test_missing_status_denied(self, call):
-        call.side_effect = [reply(), reply(1)]
+        call.side_effect = [reply(output=b"ActiveState=active\nJob=0\nMainPID=123\n"), reply(), reply(1)]
         with self.assertRaises(PermissionError):
             stop_and_verify_unit(UNIT)
 
     @patch("agency.fenced_systemd_supervisor._systemctl")
     def test_active_pid_never_accepted(self, call):
         call.side_effect = [
-            reply(), reply(output=b"ActiveState=active\nSubState=running\nJob=\nMainPID=123\n")]
+            reply(output=b"ActiveState=active\nSubState=running\nJob=\nMainPID=123\n"), reply()]
         with patch("agency.fenced_systemd_supervisor.time.monotonic",
                    side_effect=[0, 1]):
             with self.assertRaises(PermissionError):
