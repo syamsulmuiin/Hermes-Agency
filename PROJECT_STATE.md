@@ -1173,3 +1173,11 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Root cause: new isolated acceptance fixture did not bootstrap its ownership journal before invoking the fail-closed launcher lock.
 - Minimal patch `af72030`: fixture calls existing `fenced_unit_journal._connect(journal)` to initialize its isolated root-owned journal before launch. The journal-required security check remains unchanged. Patch NOT YET VPS-VALIDATED.
 - No broker SIGKILL/watchdog integration validated. Production unchanged.
+
+
+## VPS new-launcher acceptance failure #2 (2026-11-07)
+- Operator at `a75e2c6`: `STATIC_EXIT=0`, `UNIT_EXIT=0` (275 tests, 1 skipped), `LAUNCHER_EXIT=1`, `PRODUCTION_SERVICE_EXIT=0`, production active.
+- Broker received EOF/invalid framing while waiting for trusted peer `locked`; exact peer-side exception not yet captured. Likely fixture SQLite rollback-journal directory permission issue: database owned by nonroot, but parent folder root-owned 0711.
+- Follow-up cleanup attempted systemd stop on an apparently unlaunched unit and masked the initial exception.
+- Patch `f5efa88`: isolated fixture puts trusted DB in dedicated nonroot-owned 0700 subdirectory; root journal remains in root-owned staging parent; cleanup attempts stop only when unit is active, retaining primary exception otherwise. This is a hypothesis-driven fixture fix, NOT yet validated.
+- Do not infer broker SIGKILL or independent watchdog recovery PASS. Production unchanged.
