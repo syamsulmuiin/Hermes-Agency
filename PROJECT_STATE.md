@@ -1392,3 +1392,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Static source review of candidate unit, grant transport and recovery revealed a deployment revision/sandbox blocker: candidate `WorkingDirectory=/opt/hermes-agency`, `ProtectHome=yes`, whereas previous tests ran from `/root/Hermes-Agency`. Mere presence of `/opt/hermes-agency` is insufficient to prove imports/dependencies and matching revision.
 - Grant envelope and submission transport are compatible in source, but real production caller/socket routing is not verified; PID1 ordering tested in isolated fixtures but not the exact candidate manifest.
 - Added `docs/FENCED_PRODUCTION_CUTOVER_RUNBOOK.md` (`c92a4bf`) with mandatory validation gates and fail-closed rollback. **No production cutover performed**; production services must remain unchanged until evidence and precise operator-approved switch plan.
+
+## GitHub-first deployment parity enforcement (2026-11-07)
+- Operator output: `/opt/hermes-agency/agency/fenced_broker_candidate.py` missing, while `/root/Hermes-Agency` has latest candidate code; `systemd-analyze security deploy/systemd/...` returned unit-not-found, so sandbox assessment did not run. `systemd-analyze verify` exit 0; production services active.
+- Added read-only `agency.fenced_deployment_parity` to fail closed when critical deployed modules are missing/stale or Python import resolves incorrectly (`dba733b`). Updated cutover runbook (`c91b5fb`).
+- Policy: changes must be committed to GitHub development branch before deployment; do not apply one-off VPS-only patches or overwrite `/opt` blindly. Pending operator deployment layout output and parity test. No production cutover.
