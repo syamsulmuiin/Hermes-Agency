@@ -630,3 +630,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Trusted state and key dirs `0700` trusted:trusted; SQLite and credential signing key `0600` trusted:trusted. `/opt/hermes-agency` and `/opt/hermes-agency/agency` `0755` root:root; production `trusted_execution.py` `0644` root:root.
 - Root filesystem 29G, 22G used, 6.7G available, 77% used; inode use 13%. Optional broker and operator units `not-found`, `/etc/hermes-broker`, `/var/lib/hermes-broker`, `/run/hermes-broker`, `/run/hermes-operator` absent.
 - Preflight passes **observed ownership/group/layout gates only**. No backup, file replacement, secret provisioning, optional unit installation or activation has occurred. Next gate: plan consistent SQLite snapshot and verified rollback archive, avoiding disclosure of credentials and interruption to running service.
+
+
+## Production backup completed and verified (2026-11-07)
+- User executed approved root-only backup at `/root/hermes-deployment-backups/20261107T013007Z` (directory `0700 root:root`).
+- Backup contains `production-agency.tar.gz` (original installed agency code), `trusted-keys.tar.gz` (sensitive credentials), consistent SQLite Backup API snapshot `agency.db` (integrity check PASS), and `SHA256SUMS` (all three files OK). Archives validated; production main service remained `active`.
+- Treat backups as sensitive and do not transmit secrets. Preserve live database during rollback rather than restoring snapshot by default. Next gate: preflight exact 11-file runtime overlay and rollback strategy before writing `/opt/hermes-agency`; do not replace unrelated modules.
