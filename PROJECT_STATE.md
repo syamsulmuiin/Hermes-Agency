@@ -965,3 +965,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation at db9d1a1 and ran `python3 -m agency.real_systemd_startup_gate_test --execute`.
 - Output: `real_journal_pending_blocks_execstart=PASS`, `real_journal_verified_allows_execstart=PASS`, `JOURNAL_GATE_EXIT_CODE=0`.
 - Confirms real ExecStartPre calls root-only journal gate: pending blocks ExecStart; simulated verified transition permits it. Does NOT prove independent automatic recovery after broker SIGKILL or actual trusted UID lease IPC and SQLite fence lifetime. Production unchanged.
+
+
+## Automatic recovery real-systemd test harness added (2026-11-07)
+- Commit a83cc16 adds opt-in `agency.real_systemd_auto_recovery_test --execute`. Uses random broker/recovery systemd test services under `/run/systemd/system`, `OnFailure=` recovery trigger, random `hermes-fenced-*` transient sleep unit, private root-owned SQLite journal, and SIGKILL of the test broker. Verifies journal pending blocks startup before crash and expects OnFailure recovery to stop unit and mark verified without manual recovery command. Cleans test units in finally. This is NOT run on VPS; result unknown.
+- This is a test-only independent recovery demonstration; it is not production lifecycle wiring, and real trusted UID sidecar/SQLite lease loss and race-free stop-before-release remain NOT IMPLEMENTED/NOT VERIFIED. Do not treat synthetic socket EOF as trusted lease acceptance. Production service unchanged.
