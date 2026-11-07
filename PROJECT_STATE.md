@@ -427,3 +427,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Broker verifies signed claims, then reads live trusted SQLite `task_leases`, task state, and `execution_grants`/approval provenance before atomic grant consumption and execution. Missing/expired/revoked lease, generation mismatch, forged job, wrong peer and replay deny.
 - Five new tests exercise actual TrustedApprovalService approval -> lease -> issued grant -> Unix socket -> simulated fixed job, plus negative cases. Expected 182 tests; VPS validation pending.
 - NOT YET PRODUCTION: handler is not wired to a privileged listener/service; key provisioning and secure cross-UID socket permissions not deployed; lease check and broker consume are not a single cross-database atomic transaction (revocation race possible). Test uses simulated executor, not real systemd. Do not enable autonomous agent execution until those blockers are resolved and tested.
+
+## Production boundary hardening progress (2026-11-07)
+- VPS baseline confirmed 182/182 PASS, trusted service active before this patch.
+- Signed execution now opens trusted SQLite with mode=rw, holds BEGIN IMMEDIATE during live lease verification and fixed-job execution, and rolls back lock afterward. This prevents SQLite-mediated lease revocation between validation and job completion (including WAL mode), but may temporarily block trusted writers; execution remains fixed/short-lived.
+- Added test for concurrent lease deletion blocked during execution; expected 183 tests, VPS pending.
+- Remaining: secure dedicated cross-UID broker socket listener (not yet deployed), key provisioning/rotation, live service transport, production multi-process E2E and operator-controlled rollout. No autonomous tool enablement. Never claim production FINISH.
