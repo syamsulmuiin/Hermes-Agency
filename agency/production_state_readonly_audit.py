@@ -84,12 +84,15 @@ def report(ledger, journal, trusted):
         print("JOURNAL_DATABASE_QUICK_CHECK=" + str(j.execute("PRAGMA quick_check").fetchone()[0]))
 
 
-def simulate(ledger, journal, trusted):
+def simulate(ledger, journal, trusted, *, journal_absent=False):
     # Only copies are mutated. No systemctl, no network, no live jobs.
     with sqlite3.connect(ledger) as l, sqlite3.connect(journal) as j:
-        if "owned_units" not in tables(j):
-            print("COPY_REHEARSAL=BLOCKED_NO_JOURNAL")
-            return
+        if journal_absent:
+            j.execute("CREATE TABLE owned_units(unit TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('pending','verified')))")
+            print("COPY_ONLY_JOURNAL_BOOTSTRAP=PASS")
+        elif "owned_units" not in tables(j):
+            print("COPY_REHEARSAL=BLOCKED_INVALID_JOURNAL")
+            return False
         if count(j, "owned_units", "state='pending'") != 0:
             print("COPY_REHEARSAL=BLOCKED_PENDING_UNITS")
             return
@@ -117,6 +120,7 @@ def simulate(ledger, journal, trusted):
         print("COPY_LEDGER_REPLAY_HISTORY_PRESERVED=PASS")
         print("COPY_REHEARSAL=PASS")
         print("REAL_SYSTEMD_CUTOVER_TESTED=NO")
+        return True
 
 
 def main():
@@ -130,12 +134,14 @@ def main():
     with tempfile.TemporaryDirectory(prefix="hermes-state-audit-", dir="/run") as tmp:
         os.chmod(tmp, 0o700)
         paths = []
+        journal_absent = False
         for label, original in (("ledger", args.ledger), ("journal", args.journal), ("trusted", args.trusted)):
             if label == "journal" and not os.path.exists(original):
                 dest = os.path.join(tmp, label + ".sqlite")
                 with sqlite3.connect(dest):
                     pass
                 print("OWNERSHIP_JOURNAL_SOURCE=ABSENT")
+                journal_absent = True
                 paths.append(dest)
                 continue
             dest = os.path.join(tmp, label + ".sqlite")
@@ -143,7 +149,13 @@ def main():
             print("SQLITE_ONLINE_BACKUP_" + label.upper() + "=PASS")
             paths.append(dest)
         report(*paths)
-        simulate(*paths)
+        rehearsal_passed = simulate(*paths, journal_absent=journal_absent)
+        ready = bool(not journal_absent and rehearsal_passed)
+        with sqlite3.connect(paths[0]) as ledger_copy:
+            ready = ready and "signed_grant_consumptions" in tables(ledger_copy)
+        print("PRODUCTION_CUTOVER_STATE_GATE=" + ("PASS" if ready else "NO_GO"))
+        if not ready:
+            raise SystemExit(2)
 
 
 if __name__ == "__main__":
