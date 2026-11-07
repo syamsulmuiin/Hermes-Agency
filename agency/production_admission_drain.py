@@ -41,7 +41,6 @@ def exclusive_admission_drain(*, timeout=30):
                 raise PermissionError("Admission lock inode changed")
             print("OPERATOR_ADMISSION_DRAIN=LOCKED", flush=True)
             yield
-        finally:
-            fcntl.flock(fd, fcntl.LOCK_UN)
+            # Verify the lock pathname still references the held inode before\n            # releasing the exclusive lease; fail closed on replacement.\n            current = os.stat(LOCK, follow_symlinks=False)\n            if (current.st_dev != info.st_dev or current.st_ino != info.st_ino\n                    or current.st_nlink != 1):\n                raise PermissionError("Admission lock inode changed during drain")\n        finally:\n            fcntl.flock(fd, fcntl.LOCK_UN)
     finally:
         os.close(fd)
