@@ -60,6 +60,11 @@ systemd-run --system --unit="$UNIT" --collect \
   --property=ProtectHome=no --property=ProtectSystem=strict \
   --property="ReadWritePaths=$BASE" \
   --property=PrivateTmp=no --property=RestrictAddressFamilies=AF_UNIX \
+  --property=ProtectKernelTunables=yes --property=ProtectKernelModules=yes \
+  --property=ProtectKernelLogs=yes --property=ProtectControlGroups=yes \
+  --property=ProtectClock=yes --property=PrivateDevices=yes \
+  --property=RestrictSUIDSGID=yes --property=LockPersonality=yes \
+  --property=RestrictRealtime=yes --property=SystemCallArchitectures=native \
   /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_broker \
   --socket "$SOCK" --trusted-user "$TRUSTED_USER" \
   --ledger "$LEDGER" --trusted-db "$DB" --key "$KEY"
@@ -75,10 +80,35 @@ fi
 runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_integration_client \
   --database "$DB" --credential-key "$BASE/trusted/credential.key" \
   --broker-key "$KEY" --socket "$SOCK"
+OLD_GRANT="$BASE/trusted/unused-old-grant.json"
+runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_integration_client \
+  --database "$DB" --credential-key "$BASE/trusted/credential.key" \
+  --broker-key "$KEY" --socket "$SOCK" --prepare-path "$OLD_GRANT"
 python3 - "$KEY" "$TUID" "$TGID" <<'PY'
 import sys
 from agency.broker_key_rotation import rotate_broker_key
 rotate_broker_key(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
+PY
+# Verify rejection while old grant is unexpired and its lease is still live.
+runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 - "$SOCK" "$OLD_GRANT" <<'PY'
+import json, sys, time
+from pathlib import Path
+from agency.signed_broker_service import submit_signed_grant
+envelope = json.loads(Path(sys.argv[2]).read_text())
+assert time.time() < envelope["claims"]["exp"], "Old grant expired before rotation check"
+try:
+    response = submit_signed_grant(sys.argv[1], envelope)
+except (PermissionError, OSError):
+    print("unused_pre_rotation_grant_rejected=PASS")
+else:
+    raise AssertionError("Old grant accepted: " + repr(response))
+PY
+python3 - "$LEDGER" <<'PY'
+import sqlite3, sys
+with sqlite3.connect(sys.argv[1]) as db:
+    count = db.execute("SELECT COUNT(*) FROM signed_grant_consumptions").fetchone()[0]
+assert count == 1, ("Rejected old grant reached ledger", count)
+print("rejected_grant_no_execution=PASS")
 PY
 # New key must still authorize a fresh real approval from the trusted UID.
 runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_integration_client \
