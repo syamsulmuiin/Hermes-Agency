@@ -1281,3 +1281,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Strict broker mode preparation
 - `agency.supervised_broker --require-fenced` explicitly refuses to bind or execute while persistent production-grade fenced broker integration is absent. This is a deliberate fail-closed option for future cutover; DO NOT add it to the existing production ExecStart because it would prevent broker startup. Existing default behavior remains unchanged and unfenced. Added `tests/test_strict_broker.py` (not yet run on VPS).
 - No production integration claim. Remaining architecture is substantial: per-request trusted peer and grant replay handling, root-owned durable journal, watchdog independent of broker death, systemd unit stop verification, startup recovery ordering, and end-to-end acceptance. No production service changes.
+
+## Fenced grant replay integration (2026-11-07)
+- Added `agency/fenced_grant_ledger.py` with root-owned SQLite atomic one-time grant consumption and terminal status update. Replays are denied even after failure; `completed` requires explicit verified stop outcome.
+- `agency/fenced_staging_broker.staging_broker_job` now accepts an optional root ledger; when supplied it consumes the grant under staging launch serialization before work and marks completed only after stop-verified recovery. Existing staging calls without a ledger are unchanged.
+- Added `tests/test_fenced_grant_ledger.py` for replay, completed, and failed cases. Changes have NOT been tested on VPS. This is an incremental integration building block, not production listener/watchdog wiring.
+- Next: compose a persistent signed-grant broker with trusted UID peer, production-safe journal path, independent watchdog/recovery, startup ordering and acceptance. Do not modify `/opt/hermes-agency` until complete.
