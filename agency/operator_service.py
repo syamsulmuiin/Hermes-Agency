@@ -34,10 +34,11 @@ def load_private_secret(path):
 
 def verify_private_broker_group(broker_key_path, worker_user):
     """Worker must NEVER belong to the broker signing-key group."""
-    if os.geteuid() == 0 or not isinstance(worker_user, str) or not worker_user:
+    if (os.geteuid() == 0 or os.getegid() == 0
+            or not isinstance(worker_user, str) or not worker_user):
         raise PermissionError("Trusted non-root sidecar and worker identity required")
     worker = pwd.getpwnam(worker_user)
-    if worker.pw_uid == os.geteuid():
+    if worker.pw_uid == 0 or worker.pw_uid == os.geteuid():
         raise PermissionError("Worker must have distinct UID")
     # _trusted_key checks O_NOFOLLOW, root ownership, exact 0640 and
     # root:effective-primary-group. Preserve that stricter existing policy.
