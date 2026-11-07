@@ -1226,3 +1226,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Integrated staging crash first VPS run (2026-11-07)
 - At `657ce4e`: static PASS, unit tests PASS (279, 1 skipped), integrated test FAIL before unit launch with `PermissionError: Expired or future grant`, production service active.
 - Root cause: synthetic fixture grant `exp=iat+120`, exceeding immutable broker verifier maximum of 60 seconds. Corrected fixture to `exp=iat+60` in `1cbf838`; verifier and production unchanged. Awaiting VPS retest; integrated SIGKILL and independent recovery remain NOT VERIFIED.
+
+## Integrated staging broker SIGKILL acceptance VERIFIED on VPS (2026-11-07)
+- VPS commit `afb41a4`: `INTEGRATED_EXIT=0`; `INTEGRATED_ACTIVE_UNIT_AND_PENDING_GATE=PASS`, `INTEGRATED_REAL_BROKER_SIGKILL_GATE=PASS`, `INTEGRATED_WATCHDOG_ONFAILURE_TRIGGERED=PASS`, `INTEGRATED_INDEPENDENT_RECOVERY_AND_GATE=PASS`.
+- Post-test `systemctl list-units --all 'hermes-integrated-*' 'hermes-fenced-*'` reported zero loaded units; `hermes-agency.service` remained `active` (`PRODUCTION_SERVICE_EXIT=0`).
+- The trusted peer emitted `BrokenPipeError` during deliberate broker SIGKILL; independent recovery still completed and the acceptance test exited zero. Consider targeted expected-disconnect diagnostics without changing fail-closed semantics.
+- This is verified isolated integrated staging crash recovery, NOT production wiring. Remaining: concurrency/race acceptance, direct unfenced systemd execution audit/closure, and production integration authorization. Do not merge main or alter production.
