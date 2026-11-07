@@ -83,7 +83,7 @@ def verify_broker_grant(envelope, key, now=None):
     return claims
 
 
-def verify_live_lease(trusted_db_path, claims, now=None):
+def verify_live_lease(trusted_db_path, claims, now=None, connection=None):
     """Read-only live fencing check against trusted SQLite state.
 
     The trusted database must be opened through an operator-controlled path,
@@ -93,9 +93,11 @@ def verify_live_lease(trusted_db_path, claims, now=None):
     if not isinstance(trusted_db_path, str) or not trusted_db_path.startswith("/"):
         raise PermissionError("Trusted database path must be absolute")
     try:
-        db = sqlite3.connect("file:" + trusted_db_path + "?mode=ro", uri=True, timeout=5)
+        db = connection if connection is not None else sqlite3.connect(
+            "file:" + trusted_db_path + "?mode=ro", uri=True, timeout=5)
         try:
-            db.execute("PRAGMA query_only=ON")
+            if connection is None:
+                db.execute("PRAGMA query_only=ON")
             row = db.execute("""SELECT l.worker,l.generation,l.expires_at,t.status,t.owner
                 FROM task_leases l JOIN tasks t ON t.id=l.task_id
                 WHERE l.task_id=?""", (claims["task"],)).fetchone()
@@ -105,7 +107,8 @@ def verify_live_lease(trusted_db_path, claims, now=None):
                 WHERE g.idempotency_key=? AND g.task_id=?""",
                 (claims["id"], claims["task"])).fetchone()
         finally:
-            db.close()
+            if connection is None:
+                db.close()
     except sqlite3.Error as exc:
         raise PermissionError("Trusted state unavailable") from exc
     if (not row or row[0] != claims["worker"]
