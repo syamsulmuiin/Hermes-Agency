@@ -761,3 +761,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Executed python3 -m unittest -v tests.test_trusted_lease_fence tests.test_trusted_broker_socket tests.test_broker_grants.
 - Result: Ran 18 tests in 0.462s, OK, TEST_EXIT_CODE=0; 5 new lease fencing tests, 6 trusted broker socket tests, 7 broker grant tests all passed.
 - Production services were not restarted or deployed by this command. Trusted-sidecar IPC and real systemd noop remain unimplemented/unverified; production acceptance still pending.
+
+
+## Experimental trusted lease IPC prototype (2026-11-07)
+- Added agency/trusted_lease_ipc.py (57c6e7a, corrected acknowledgement ordering c722335) and tests/test_trusted_lease_ipc.py (a42cb6e). Protocol checks SO_PEERCRED root UID and signed grant, locks live trusted SQLite lease through job callback, acknowledges release only after transaction exits; disconnect triggers cleanup.
+- New IPC tests cover lock held through callback, disconnect releases lock, and revoked lease rejected before callback. Tests NOT YET EXECUTED on VPS.
+- IMPORTANT: This is an unconnected experimental primitive, NOT a deployable service or completed broker integration. It does not yet include socket filesystem ownership/lifecycle, broker-ledger replay wiring, bounded execution supervision or sidecar-crash job termination. The 10s socket timeout is not suitable for arbitrary job duration. No production runtime/service changes; production acceptance remains blocked.
