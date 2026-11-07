@@ -4,6 +4,8 @@ Only an explicitly root-owned local operator process can connect. The worker
 protocol and broker socket are separate; no credentials or signing keys are
 issued to operator clients. This module does not deploy or enable a socket.
 """
+import contextlib
+import fcntl
 import json
 import os
 import socket
@@ -80,26 +82,55 @@ def load_operator_verifier(path):
         raise PermissionError("Invalid operator verifier") from exc
 
 
+@contextlib.contextmanager
+def operator_admission_lease(path="/run/hermes-operator/admission.lock"):
+    """Shared nonblocking lock held across approval and broker execution.
+
+    A maintenance controller must acquire an exclusive lock on this same
+    inode and KEEP THE FILE DESCRIPTOR OPEN through the entire cutover.
+    Existing sidecar processes must be restarted onto this code before
+    the lock can provide a complete quiescence guarantee.
+    """
+    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                or info.st_uid not in (0, os.geteuid())
+                or stat.S_IMODE(info.st_mode) & 0o077):
+            raise PermissionError("Unsafe admission lock")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise PermissionError("Operator admission locked for maintenance") from exc
+        try:
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
 def dispatch_operator(boundary, request, verifier, broker_key_path, broker_socket_path):
     """Authenticate and decide; broker execution is only after actual approval."""
-    operator_identity, salt, proof = verifier
-    # Cooperative maintenance marker; not a security boundary or drain lock.
-    # A race remains between this check and broker execution.
-    freeze = "/run/hermes-operator/admission.freeze"
-    if os.path.lexists(freeze):
-        raise PermissionError("Operator admission frozen for maintenance")
-    boundary.approve_operator_request(
-        request["approval_id"], bytes.fromhex(request["operator_secret_hex"]),
-        operator_identity, salt, proof,
-    )
-    if request["action"] == "approve_and_execute":
-        return boundary.execute_operator_approved_job(
-            request["approval_id"], request["task_id"], request["job"],
-            request["worker_credential"], request["lease_token"],
-            broker_key_path, broker_socket_path,
+    with operator_admission_lease():
+        operator_identity, salt, proof = verifier
+        # Cooperative maintenance marker; not a security boundary or drain lock.
+        # A race remains between this check and broker execution.
+        freeze = "/run/hermes-operator/admission.freeze"
+        if os.path.lexists(freeze):
+            raise PermissionError("Operator admission frozen for maintenance")
+        boundary.approve_operator_request(
+            request["approval_id"], bytes.fromhex(request["operator_secret_hex"]),
+            operator_identity, salt, proof,
         )
-    return None
-
+        if request["action"] == "approve_and_execute":
+            return boundary.execute_operator_approved_job(
+                request["approval_id"], request["task_id"], request["job"],
+                request["worker_credential"], request["lease_token"],
+                broker_key_path, broker_socket_path,
+            )
+        return None
+    
 
 def handle_operator_connection(connection, boundary, verifier,
                                broker_key_path, broker_socket_path):
