@@ -41,10 +41,12 @@ def staging_broker_job(conn, grant, verification_key, journal, *,
     claims = verify_broker_grant(grant, verification_key)
     unit = unit_for_grant(claims["id"])
 
-    def launch():
+    def admit():
         if ledger is not None:
             from .fenced_grant_ledger import consume_fenced_grant
             consume_fenced_grant(ledger, grant, verification_key)
+
+    def launch():
         def execute(job):
             if job != claims["job"]:
                 raise PermissionError("Grant job mismatch")
@@ -67,4 +69,4 @@ def staging_broker_job(conn, grant, verification_key, journal, *,
             finish_fenced_grant(ledger, claims["id"], verified=True)
         return result
 
-    return staging_launch(journal, unit, launch)
+    return staging_launch(journal, unit, launch, admit=admit)
