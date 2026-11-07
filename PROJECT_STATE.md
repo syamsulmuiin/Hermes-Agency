@@ -1141,3 +1141,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added `tests/test_fenced_staging_launcher.py` for isolation and privilege input guards, and `deploy/staging/hermes-staging-recovery.service.example` as an UNINSTALLED recovery oneshot example. No production unit or runtime path modified.
 - WARNING: the recovery example is NOT an independent watchdog by itself; it must be triggered by a separately supervised staging broker unit, and must survive its death. This lifecycle has NOT been wired or tested. The launcher has NOT undergone real end-to-end IPC/systemd validation, concurrent recovery tests, or SIGKILL tests. Direct `systemd_jobs` bypass remains open. Do not deploy/enable the example in production or declare staging integration complete.
 - Next: run new unit tests, then build a dedicated opt-in real staging acceptance suite with isolated fixture grants, a long-running allowlisted transient unit, independent systemd recovery trigger, SIGKILL and concurrent admission tests; close operator-only direct execution path only after regression review.
+
+
+## VPS launcher static/unit validation (2026-11-07)
+- Operator reported at commit `d8dccd7`: `STATIC_EXIT=0`, `UNIT_EXIT=0` (1 skipped), `PRODUCTION_SERVICE_EXIT=0`, production service active.
+- This validation did not execute the new launcher with real trusted IPC/systemd or the example recovery service. No watchdog installation, SIGKILL test, concurrent launch/recovery test, or direct execution bypass closure has been demonstrated.
+- Next mandatory acceptance: staging-only fixture with real non-root peer and signed grant; independently supervised root stop/recovery, active unit SIGKILL injection, pending startup gate and recovery ordering; concurrency and bypass regression. Production remains unchanged.
