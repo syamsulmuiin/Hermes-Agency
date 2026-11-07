@@ -18,11 +18,11 @@ systemctl is-active hermes-agency.service
 
 The new harness uses throwaway fixtures under `/run/hermes-supervised-e2e.*`, transient systemd units and independent database, keys, broker ledger, operator verifier and operator secret. It enables `ProtectHome=yes`, `PrivateTmp=yes`, `ProtectSystem=strict`, the broker's capability bounding set and most other production broker restrictions. It retains the existing negative tests for worker socket denial, incorrect operator secret and stale HMAC grants. It must finish with `HARDENED_RUNTIME_EXIT_CODE=0` and the existing production service active.
 
-**Limitations:** this is *production-like*, not byte-for-byte production equivalence. Transient units still use `ReadWritePaths` for temporary fixtures, `/run` instead of final locations, and test-only secrets. No production ledger or SQLite is touched. This script has not yet been executed on the VPS; report its actual output before claiming PASS. Inspect transient-unit journal on any failure and fix the smallest root cause. Never bypass a failing hardening control just to obtain PASS.
+**Limitations:** this is *production-like*, not byte-for-byte production equivalence. Transient units still use `ReadWritePaths` for temporary fixtures, `/run` instead of final locations, and test-only secrets. No production ledger or SQLite is touched. VPS operator executed the script on 2026-11-07: syntax exit 0, hardened runtime exit 0, all reported checks PASS, and the existing service remained active. This validates the isolated harness only. Inspect transient-unit journal on any failure and fix the smallest root cause. Never bypass a failing hardening control just to obtain PASS.
 
 ## Gate B: deployment prerequisites (read-only)
 
-- Confirm the production checkout revision and audited code hashes. The currently installed `/opt/hermes-agency` version is not yet confirmed to match development.
+- Confirm the production checkout revision and audited code hashes. The installed `/opt/hermes-agency` is not a Git checkout. SHA-256 comparison found `single_vps_service.py`, `service_lifecycle.py`, and `private_state.py` identical; `trusted_execution.py` differs; `supervised_broker.py`, `operator_service.py`, and `operator_control.py` are absent. Full dependency compatibility is unverified.
 - Confirm worker UID 995, trusted UID 997/private GID 986, shared transport GID 987. **Never grant broker key access to GID 987**.
 - Verify the real trusted SQLite and credential secret paths and their owner/mode, without reading or copying their contents.
 - Verify the operator verifier is distinct from the worker credential. Provision its verifier only after explicit approval; operator secret must not be in shell argv, environment, logs, repository, or chat.
