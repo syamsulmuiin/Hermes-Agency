@@ -796,3 +796,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator reported VPS checkout already up to date and executed 5 unittest modules: trusted_lease_ipc_long_job, trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants.
 - Result: 24 tests in 11.070s, OK, TEST_EXIT_CODE=0. New 10.25-second fake job kept trusted SQLite lock through the previous 10-second timeout boundary; wrong peer UID rejected; invalid completion released lock. No real systemd job was run.
 - Production IPC wiring, replay ledger integration, sidecar/broker crash supervision, and actual approved noop acceptance remain pending; this is not production approval.
+
+
+## Opt-in broker-to-trusted fence ledger integration (2026-11-07)
+- Added execute_fenced_signed_grant in agency/systemd_broker.py (949c2bb): verify grant; connect to trusted lease IPC; require locked acknowledgement; atomically insert unique signed_grant_consumptions row in root ledger and commit before fixed-job executor; reject replay; update completed/failed only after fence completion acknowledgement. Root broker does not open trusted SQLite for writing in this new function.
+- Added tests/test_fenced_broker_ledger.py (785c8e3): fake fixed-job ledger integration, lock during callback, one execution and replay denial. NOT YET RUN on VPS.
+- IMPORTANT: Function is opt-in and NOT wired into supervised_broker production listener or operator sidecar socket lifecycle. A sidecar crash may release SQLite lease while an already-launched systemd transient unit continues; current function cannot guarantee kill-on-crash. No real noop acceptance, service restart or DB migration authorized. Next: implement supervised job lifetime / sidecar failure handling and acceptance tests before production wiring.
