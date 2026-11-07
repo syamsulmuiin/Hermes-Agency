@@ -117,11 +117,11 @@ PY
 runuser -u "$TRUSTED_USER" -- /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.supervised_integration_client \
   --database "$DB" --credential-key "$BASE/trusted/credential.key" \
   --broker-key "$KEY" --socket "$SOCK"
-# Start an isolated copy of the REAL trusted service with opt-in operator IPC.
+# Start an isolated operator-only trusted sidecar on the SAME SQLite state.
+# Unlike the worker daemon, it keeps its effective GID in the private broker
+# signing-key group, which the worker is explicitly forbidden to join.
 # The live production hermes-agency.service is not touched.
-WORKER_GID="$(id -g "$WORKER_USER")"
 TRUSTED_GROUP="$(id -gn "$TRUSTED_USER")"
-install -d -m 0710 -o "$TUID" -g "$WORKER_GID" "$BASE/worker-socket"
 install -d -m 0700 -o "$TUID" -g "$TGID" "$BASE/operator"
 install -d -m 0700 -o "$TUID" -g "$TGID" "$BASE/trusted/keys"
 chown "$TUID:$TGID" "$DB"
@@ -152,14 +152,14 @@ systemd-run --system --unit="$OPUNIT" --collect \
   --property=ProtectHome=no --property=PrivateTmp=no \
   --property=ProtectSystem=strict --property="ReadWritePaths=$BASE" \
   --property=RestrictAddressFamilies=AF_UNIX \
-  /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.single_vps_service \
-  --forever --socket "$BASE/worker-socket/trusted.sock" \
+  /usr/bin/env PYTHONPATH="$BASE/app" /usr/bin/python3 -m agency.operator_service \
   --state-dir "$BASE/trusted" --database "$DB" \
-  --key-dir "$BASE/trusted/keys" --client-gid "$WORKER_GID" \
-  --allow-uid "$WUID" --secret-file "$BASE/trusted/credential.key" \
+  --key-dir "$BASE/trusted/keys" \
+  --secret-file "$BASE/trusted/credential.key" \
   --operator-socket "$OPSOCK" \
   --operator-verifier "$BASE/trusted/operator_verifier.json" \
-  --broker-key "$KEY" --broker-socket "$SOCK"
+  --broker-key "$KEY" --broker-socket "$SOCK" \
+  --worker-user "$WORKER_USER"
 for _ in $(seq 1 80); do
   [[ -S "$OPSOCK" ]] && break
   sleep 0.1
