@@ -867,3 +867,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Commit c756f5c: added NON-INSTALLED deploy/examples/20-fenced-recovery.conf with ExecStartPre and ExecStopPost recovery hooks. Must not be deployed until deployment Python paths, startup ordering and crash safety are verified.
 - Commit d58e6e1: three isolated recovery lifecycle CLI tests added; NOT YET RUN on VPS. No real crash injection performed.
 - SECURITY BLOCKER: scanning systemctl list-units alone is not durable unit ownership; transient units can be unloaded. Hooks do not cover out-of-band broker processes or guarantee the trusted lease remains locked until independent cleanup after broker death. Add durable unit registry and systemd lifecycle coupling, then isolated crash tests, before enabling or real noop acceptance.
+
+
+## Recovery lifecycle CLI verified on VPS (2026-11-07)
+- Operator pulled development/foundation to 4f1d625 and ran ten unittest modules including fenced_recovery_lifecycle plus all nine prior suites.
+- Result: 46 tests in 1.105s, OK, TEST_EXIT_CODE=0. All three new lifecycle CLI tests passed; the argparse usage message in the missing-gate negative test is expected.
+- No independent recovery service/drop-in installed, no systemd daemon reload, no real transient unit or broker crash tested. Durable unit ownership, broker lifecycle coordination, and lease-loss race remain open blockers for production acceptance.
