@@ -754,3 +754,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added tests/test_trusted_lease_fence.py in commit 35de0b641bb2e5c85223e83b99f86ccd1ed13a78 with 5 cases: writer contention, revoked lease, expiry, exception cleanup, invalid path.
 - These new tests have NOT been run on the VPS yet. The primitive is not wired into operator sidecar IPC or broker; existing production code and services remain unchanged. Do not mark end-to-end production acceptance complete.
 - Next: run tests, design authenticated single-use broker-to-trusted permit protocol, integrate transaction lifetime and failure handling, then isolated real noop and ledger acceptance.
+
+
+## Trusted lease primitive test evidence (2026-11-07)
+- Operator fast-forwarded VPS checkout from 82acc07 to ac97436 using git pull --ff-only origin development/foundation.
+- Executed python3 -m unittest -v tests.test_trusted_lease_fence tests.test_trusted_broker_socket tests.test_broker_grants.
+- Result: Ran 18 tests in 0.462s, OK, TEST_EXIT_CODE=0; 5 new lease fencing tests, 6 trusted broker socket tests, 7 broker grant tests all passed.
+- Production services were not restarted or deployed by this command. Trusted-sidecar IPC and real systemd noop remain unimplemented/unverified; production acceptance still pending.
