@@ -52,8 +52,11 @@ def exercise():
                 file.write("#!/bin/sh\nexit 0\n")
             if run("/usr/bin/systemctl", "reset-failed", name + ".service").returncode:
                 raise RuntimeError("Could not reset test service")
-            if run("/usr/bin/systemctl", "start", name + ".service").returncode:
-                raise RuntimeError("Gate success failed to start test service")
+            started = run("/usr/bin/systemctl", "start", name + ".service")
+            if started.returncode:
+                status = run("/usr/bin/systemctl", "status", "--no-pager", "--full", name + ".service")
+                details = (started.stderr + b"\n" + status.stdout + b"\n" + status.stderr).decode("utf-8", "replace")
+                raise RuntimeError("Gate success failed to start test service: " + details[-4000:])
             if not os.path.isfile(marker):
                 raise AssertionError("ExecStart marker absent after recovery gate passed")
             print("real_execstartpre_success_allows_execstart=PASS", flush=True)
