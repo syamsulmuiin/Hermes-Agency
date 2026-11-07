@@ -14,10 +14,11 @@ from pathlib import Path
 
 from .security import SecureAgencyStore
 from .trusted import TrustedApprovalService
-from .trusted_broker_adapter import execute_approved_job
+from .trusted_broker_adapter import execute_approved_job, _trusted_key
+from .broker_grants import issue_broker_grant
 
 
-def run_trusted_client(database, credential_key, broker_key, socket_path):
+def run_trusted_client(database, credential_key, broker_key, socket_path, prepare_path=None):
     if os.geteuid() == 0:
         raise PermissionError("Trusted client must be non-root")
     key = Path(credential_key).read_bytes()
@@ -33,6 +34,15 @@ def run_trusted_client(database, credential_key, broker_key, socket_path):
                                           {"job": "noop"}, "developer")
         approver = service.issue_credential("operator", "approver")
         service.decide(approval, approver, True)
+        if prepare_path is not None:
+            if not os.path.isabs(prepare_path) or os.path.lexists(prepare_path):
+                raise PermissionError("Unsafe grant output path")
+            envelope = issue_broker_grant(service, approval, task, "noop", worker,
+                                          lease, _trusted_key(broker_key))
+            with open(prepare_path, "x", encoding="utf-8") as output:
+                os.chmod(prepare_path, 0o600)
+                json.dump(envelope, output)
+            return {"prepared": True}
         return execute_approved_job(service, approval, task, "noop", worker,
                                     lease, broker_key, socket_path)
     finally:
@@ -45,9 +55,15 @@ def main():
     parser.add_argument("--credential-key", required=True)
     parser.add_argument("--broker-key", required=True)
     parser.add_argument("--socket", required=True)
+    parser.add_argument("--prepare-path", help="Isolated acceptance only: write unsubmitted signed grant")
     args = parser.parse_args()
     result = run_trusted_client(args.database, args.credential_key,
-                                args.broker_key, args.socket)
+                                args.broker_key, args.socket, args.prepare_path)
+    if args.prepare_path is not None:
+        if result != {"prepared": True}:
+            raise RuntimeError("Grant preparation failed")
+        print(json.dumps({"unused_signed_grant_prepared": "PASS"}))
+        return
     if result.get("isolated_backend") != "systemd" or result.get("exit_code") != 0:
         raise RuntimeError("Real systemd execution not confirmed")
     print(json.dumps({"supervised_trusted_adapter_to_systemd": "PASS",
