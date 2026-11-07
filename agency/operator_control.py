@@ -143,13 +143,10 @@ def dispatch_operator(boundary, request, verifier, broker_key_path, broker_socke
             if broker_socket_path == "/run/hermes-broker/fenced-candidate.sock":
                 if broker_key_path != "/etc/hermes-broker/signing.key":
                     raise PermissionError("Candidate requires pinned broker signing key")
-                from .fenced_trusted_route import execute_fenced_approved_job
-                return execute_fenced_approved_job(
-                    boundary, request["approval_id"], request["task_id"],
-                    request["job"], request["worker_credential"],
-                    request["lease_token"], broker_key_path=broker_key_path,
-                    broker_socket_path=broker_socket_path,
-                    admission_lease_held=True)
+                return boundary.execute_operator_approved_job(
+                    request["approval_id"], request["task_id"], request["job"],
+                    request["worker_credential"], request["lease_token"],
+                    broker_key_path, broker_socket_path)
             return boundary.execute_operator_approved_job(
                 request["approval_id"], request["task_id"], request["job"],
                 request["worker_credential"], request["lease_token"],
