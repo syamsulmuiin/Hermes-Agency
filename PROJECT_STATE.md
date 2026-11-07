@@ -623,3 +623,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - User explicitly authorized deployment of the **optional signed broker and trusted operator sidecar** to production, preserving the existing `hermes-agency.service` and keeping general agent execution disabled. This is not authorization to restart the main service, widen agent privileges, replace credentials, or delete state.
 - Execution is gated: first collect read-only host preflight (users/groups, exact paths, filesystem/mount status, running unit, Python package permissions, free space, service account group separation), then verify backup/rollback feasibility and safe code overlay before provisioning or installing optional units.
 - No VPS access via GitHub connector; assistant cannot assert host modifications. Operator must execute approved reviewed commands and return outputs. Never print secrets, copy SQLite while live without consistent snapshot, or start optional units before path/security checks.
+
+
+## Production read-only host preflight PASS (2026-11-07)
+- Live `hermes-agency.service` active; trusted uid:gid 997:986 and worker 995:985; both have shared transport group 987 but worker is not in trusted private group 986.
+- Trusted state and key dirs `0700` trusted:trusted; SQLite and credential signing key `0600` trusted:trusted. `/opt/hermes-agency` and `/opt/hermes-agency/agency` `0755` root:root; production `trusted_execution.py` `0644` root:root.
+- Root filesystem 29G, 22G used, 6.7G available, 77% used; inode use 13%. Optional broker and operator units `not-found`, `/etc/hermes-broker`, `/var/lib/hermes-broker`, `/run/hermes-broker`, `/run/hermes-operator` absent.
+- Preflight passes **observed ownership/group/layout gates only**. No backup, file replacement, secret provisioning, optional unit installation or activation has occurred. Next gate: plan consistent SQLite snapshot and verified rollback archive, avoiding disclosure of credentials and interruption to running service.
