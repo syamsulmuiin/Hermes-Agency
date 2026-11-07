@@ -970,3 +970,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Automatic recovery real-systemd test harness added (2026-11-07)
 - Commit a83cc16 adds opt-in `agency.real_systemd_auto_recovery_test --execute`. Uses random broker/recovery systemd test services under `/run/systemd/system`, `OnFailure=` recovery trigger, random `hermes-fenced-*` transient sleep unit, private root-owned SQLite journal, and SIGKILL of the test broker. Verifies journal pending blocks startup before crash and expects OnFailure recovery to stop unit and mark verified without manual recovery command. Cleans test units in finally. This is NOT run on VPS; result unknown.
 - This is a test-only independent recovery demonstration; it is not production lifecycle wiring, and real trusted UID sidecar/SQLite lease loss and race-free stop-before-release remain NOT IMPLEMENTED/NOT VERIFIED. Do not treat synthetic socket EOF as trusted lease acceptance. Production service unchanged.
+
+
+## Real systemd OnFailure automatic SIGKILL recovery VPS PASS (2026-11-07)
+- Operator pulled development/foundation at 1411e79 and ran `python3 -m agency.real_systemd_auto_recovery_test --execute`.
+- Output: `auto_recovery_pending_gate=PASS`, `systemd_onfailure_automatic_recovery=PASS`, `AUTO_RECOVERY_EXIT_CODE=0`.
+- Isolated broker/recovery test services and private journal demonstrated automatic systemd OnFailure recovery of transient unit after SIGKILL; journal becomes verified and gate permits startup. No manual recovery invocation. This does NOT prove real trusted UID lease IPC lifetime coupling, stop-before-lock-release, or production service orchestration. Production unchanged.
