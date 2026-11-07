@@ -823,3 +823,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Result: 33 tests in 1.341s, OK, TEST_EXIT_CODE=0. Four subprocess-supervisor cases passed (success, disconnect, timeout, unexpected traffic), as did atomic ledger/replay and existing regressions.
 - Correction: test_trusted_lease_ipc methods still appear twice in the output. Reusing TrustedLeaseIPCTests.setUp/tearDown via import causes unittest loader to discover that imported TestCase class in test_fenced_broker_ledger too. Remove the module-level TestCase import or extract a non-TestCase fixture before claiming duplicate tests resolved.
 - Production systemd transient unit kill-on-fence-loss, crash recovery, listener wiring and real noop acceptance remain unverified and blocked.
+
+
+## Systemd unit lifecycle guard and test discovery cleanup (2026-11-07)
+- Commit 48db661: avoid module-level import of discoverable TrustedLeaseIPCTests class into test_fenced_broker_ledger; the duplicate five IPC test methods should no longer be collected there. Await VPS verification.
+- Commit fe7fa72: added opt-in agency/fenced_systemd_supervisor.py. Exact broker-owned hermes-fenced-<32hex>.service unit names only; stop and verify inactive/failed, no pending job and MainPID=0. Fail closed if stop/status cannot be verified. Not production-wired.
+- Commit e7c702e: five mocked unit lifecycle tests (reject unrelated unit, successful stop verification, stop failure, status failure, active PID denial). Not yet run on VPS.
+- SECURITY GATE: unit stop verification is not yet integrated into broker job launch, fence disconnect detection or sidecar crash recovery. A detached systemd unit may outlive the IPC connection until a persistent root watchdog kills it. Real noop acceptance remains blocked; no production changes or restarts.
