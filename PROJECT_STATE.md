@@ -709,3 +709,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## Production operator invalid-credential denial (2026-11-07)
 - Root client sent `approve` request to operator socket with nonexistent approval ID and all-zero 64-hex secret. Operator returned `{"status":"denied"}`, `INVALID_CREDENTIAL_REJECTED=PASS`. Main, broker, and operator remained active.
 - This is one negative authentication test, not proof of valid credential acceptance or signed-grant execution. Next: review fixed job allowlist and grant issuance before selecting harmless production acceptance test. No auto-enable yet.
+
+
+## Signed broker SQLite fencing candidate (2026-11-07)
+- Production SQLite uses journal_mode=delete, trusted database parent is trusted-owned 0700, database 0600. Broker ProtectSystem=strict currently permits writes only under broker runtime/ledger directories; this conflicts with execute_signed_grant's BEGIN IMMEDIATE on trusted SQLite.
+- Added review-only candidate `deployment/systemd/hermes-signed-broker.service.d/20-trusted-db-sqlite.conf`: grants ReadWritePaths to trusted database directory while making its keys directory inaccessible. **Not installed or activated in production.** This broadens root broker write access to the trusted DB and requires explicit security acceptance; a narrower broker/trusted-UID IPC redesign remains preferable for long-term least privilege.
+- Before deployment, validate sandbox mount behavior, SQLite lock fencing, key inaccessibility, and no regression to main service. Both optional units remain disabled at boot; temporary Restart=no overrides remain.
