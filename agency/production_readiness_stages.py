@@ -52,8 +52,17 @@ def audit():
         blockers.append("Pinned candidate snapshot missing or symlink")
     else:
         evidence.append("CANDIDATE_SNAPSHOT=" + str(snapshot))
-        # Existence is not a content hash; independent manifest verification remains mandatory.
-        blockers.append("Candidate content digest and deployment manifest not attested")
+        # Revalidate the complete pinned Git tree and deployment identity on
+        # every audit. A prior manual PASS is not reusable authorization.
+        try:
+            from .fenced_snapshot_acceptance_preflight import audit as snapshot_audit
+            if snapshot_audit(pathlib.Path("/root/Hermes-Agency")) == 0:
+                evidence.append("CANDIDATE_CONTENT_MANIFEST=PASS")
+            else:
+                blockers.append("Candidate content digest and deployment manifest not attested")
+        except (OSError, ValueError, PermissionError, subprocess.SubprocessError) as exc:
+            blockers.append("Candidate content digest and deployment manifest not attested: "
+                            + type(exc).__name__)
     lock = "/run/hermes-admission/admission.lock"
     if not _regular(lock, 0o640):
         blockers.append("Admission lock not securely provisioned")
