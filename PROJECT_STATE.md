@@ -1181,3 +1181,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Follow-up cleanup attempted systemd stop on an apparently unlaunched unit and masked the initial exception.
 - Patch `f5efa88`: isolated fixture puts trusted DB in dedicated nonroot-owned 0700 subdirectory; root journal remains in root-owned staging parent; cleanup attempts stop only when unit is active, retaining primary exception otherwise. This is a hypothesis-driven fixture fix, NOT yet validated.
 - Do not infer broker SIGKILL or independent watchdog recovery PASS. Production unchanged.
+
+## Fixture syntax corruption correction (2026-11-07)
+- VPS at `c39eff6`: `LAUNCHER_EXIT=1`, `PRODUCTION_SERVICE_EXIT=0`; `NameError: database is not defined` before broker invocation.
+- Cause: prior GitHub patch embedded literal `\\n` characters within a Python comment, swallowing the trusted directory and database assignments.
+- Commit `6859f99` restores actual Python lines and conditional active-unit cleanup. NOT YET VPS-VALIDATED. Production untouched.
