@@ -7,6 +7,7 @@ No network API or tool execution is exposed here.
 from .portable_runtime import PortableAgentRuntime
 from .trusted import TrustedApprovalService
 from .trusted_broker_adapter import execute_approved_job
+from .operator_auth import LocalOperatorGate
 
 
 class TrustedAgentExecution:
@@ -43,6 +44,19 @@ class TrustedAgentExecution:
             self._approval_service, approval_id, task_id, job,
             worker_credential, lease_token, broker_key_path, broker_socket_path
         )
+
+    def approve_operator_request(self, approval_id, operator_secret,
+                                 operator_identity, operator_salt,
+                                 operator_verifier):
+        """Authenticate a local operator before recording a real approval.
+
+        Provision verifier offline; never pass these values through worker IPC.
+        Does not issue an approver credential without checking the secret.
+        """
+        gate = LocalOperatorGate(self._approval_service, operator_identity,
+                                 operator_salt, operator_verifier)
+        credential = gate.authenticate(operator_secret)
+        return self._approval_service.decide(approval_id, credential, True)
 
     def capabilities(self):
         return self._runtime.capabilities()
