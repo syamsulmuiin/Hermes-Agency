@@ -48,6 +48,8 @@ def serve_fence_connection(conn, database, verification_key, *, root_uid=0, now=
     claims = verify_broker_grant(request["grant"], verification_key, now=now)
     with fenced_lease(database, claims, now=now):
         _send(conn, {"status": "locked", "grant_id": claims["id"]})
+        # Do not expire a valid fence merely because the job exceeds 10s.
+        conn.settimeout(None)
         finish = json.loads(_read_line(conn))
         if finish != {"status": "done", "grant_id": claims["id"]}:
             raise PermissionError("Invalid lease IPC completion")
@@ -64,6 +66,8 @@ def broker_fenced_job(conn, grant, executor):
     if response != {"status": "locked", "grant_id": claims["id"]}:
         raise PermissionError("Trusted lease not locked")
     # No job runs before the trusted process confirms a live locked lease.
+    # The trusted endpoint must not time out while a permitted job runs.
+    conn.settimeout(None)
     result = executor(claims["job"])
     _send(conn, {"status": "done", "grant_id": claims["id"]})
     response = json.loads(_read_line(conn))
