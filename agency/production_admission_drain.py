@@ -36,6 +36,10 @@ def exclusive_admission_drain(*, timeout=30):
                     raise TimeoutError("Admission drain did not complete")
                 time.sleep(0.05)
         try:
+            current = os.stat(LOCK, follow_symlinks=False)
+            if (current.st_dev != info.st_dev or current.st_ino != info.st_ino
+                    or current.st_nlink != 1):
+                raise PermissionError("Admission lock inode changed")
             print("OPERATOR_ADMISSION_DRAIN=LOCKED", flush=True)
             yield
         finally:
