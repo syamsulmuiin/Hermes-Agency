@@ -181,7 +181,7 @@ def run(*, deployed=None):
                      "After=" + recovery_unit + "\nRequires=" + recovery_unit
                      + "\nOnFailure=" + recovery_unit
                      + "\n[Service]\nType=simple\nUser=root\n"
-                     "WorkingDirectory=" + repo + "\nEnvironment=HERMES_ISOLATED_HOLD_MARKER=" + marker + "\nExecStartPre=" + python
+                     "WorkingDirectory=" + repo + "\n" + sandbox + "Environment=HERMES_ISOLATED_HOLD_MARKER=" + marker + "\nExecStartPre=" + python
                      + " -m agency.fenced_startup_gate --journal " + journal
                      + "\nExecStart=" + broker_command
                      + "\nExecStopPost=" + recovery_command
