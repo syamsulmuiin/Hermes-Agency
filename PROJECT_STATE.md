@@ -1467,3 +1467,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added read-only `agency.fenced_final_manifest_audit` (`49dea42`) to check pinned WorkingDirectory, root identities, sandbox, recovery ordering, startup/stop gates, writable socket/journal/trusted SQLite paths, and isolated candidate socket. Returns exit 2 and explicit blockers on mismatch; does not install or modify systemd.
 - Existing candidate manifest is known to FAIL because both units target stale `/opt/hermes-agency` rather than pinned `/opt/hermes-fenced-377abe8b948b`, and broker `ReadWritePaths` omits `/var/lib/hermes-agency` required for trusted SQLite lease/WAL under strict sandbox. Do not install as-is.
 - Full operator-authentication -> real approval -> real signed grant -> broker fenced -> recovery integration is NOT yet implemented/tested; previous staging acceptance used synthetic approved-grant fixture. Production cutover NO-GO; both live services untouched.
+
+## VPS manifest audit FAIL and targeted candidate manifest fixes (2026-11-07)
+- Operator ran `agency.fenced_final_manifest_audit`, exit 2: broker pinned path, recovery pinned path, and trusted SQLite WAL/lease writable path failed. Both production services active.
+- Candidate-only manifests updated in GitHub commits `c10a4db` and `b87d438`: WorkingDirectory pinned to `/opt/hermes-fenced-377abe8b948b`; broker sandbox `ReadWritePaths` now includes `/var/lib/hermes-agency`. No active unit installed/restarted or production resource mutated. Re-run static audit and systemd-analyze verify on VPS.
+- Static PASS will not prove effective trusted UID writes, production approved-job routing or real operator approval E2E. Cutover remains NO-GO.
