@@ -16,6 +16,7 @@ class SimulatedAdapter:
     def _step(self, name):
         self.calls.append(name)
         if self.fail == name:
+            self.fail = None
             raise RuntimeError("Injected failure: " + name)
 
     @contextlib.contextmanager
