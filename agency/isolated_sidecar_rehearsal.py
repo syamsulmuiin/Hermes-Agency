@@ -76,6 +76,14 @@ def run_sidecar_rehearsal(folder, db, broker_key, broker_socket, identity, repo)
         raise PermissionError("Isolated root staging only")
     from .operator_auth import LocalOperatorGate
     from .operator_service import main as sidecar_main
+    # Import lazy boundary dependencies while still privileged. The forked
+    # trusted UID cannot traverse the original checkout under /root.
+    from .operator_service import _boundary_factory
+    from .security import SecureAgencyStore
+    from .orchestrator import WorkflowCoordinator
+    from .portable_runtime import PortableAgentRuntime
+    from .trusted import TrustedApprovalService
+    from .trusted_execution import TrustedAgentExecution
     worker = next((p for p in (pwd.getpwnam("daemon"), pwd.getpwnam("root"))
                    if p.pw_uid not in (0, identity.pw_uid)), None)
     if worker is None:
