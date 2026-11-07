@@ -1,0 +1,38 @@
+[Unit]
+Description=Hermes Agency trusted operator sidecar (opt-in; root peer only)
+After=hermes-agency.service hermes-signed-broker.service
+RequiresMountsFor=/var/lib/hermes-agency /etc/hermes-broker
+ConditionPathExists=/var/lib/hermes-agency/keys/operator-verifier.json
+
+[Service]
+Type=simple
+User=hermes-trusted
+Group=hermes-trusted
+WorkingDirectory=/opt/hermes-agency
+ExecStart=/usr/bin/python3 -m agency.operator_service --state-dir /var/lib/hermes-agency --database /var/lib/hermes-agency/agency.db --key-dir /var/lib/hermes-agency/keys --secret-file /var/lib/hermes-agency/keys/signing.key --operator-socket /run/hermes-operator/operator.sock --operator-verifier /var/lib/hermes-agency/keys/operator-verifier.json --broker-key /etc/hermes-broker/signing.key --broker-socket /run/hermes-broker/broker.sock --worker-user hermes-worker
+Restart=on-failure
+RestartSec=2
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+PrivateDevices=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/var/lib/hermes-agency /run/hermes-operator
+LimitCORE=0
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
