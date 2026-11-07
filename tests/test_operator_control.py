@@ -1,4 +1,5 @@
 """Operator-only IPC security tests; no root access or live service required."""
+import contextlib
 import json
 import unittest
 from unittest.mock import Mock, patch
@@ -25,6 +26,12 @@ def request(action="approve"):
 
 
 class OperatorControlTests(unittest.TestCase):
+    def setUp(self):
+        self._admission = patch("agency.operator_control.operator_admission_lease",
+                                return_value=contextlib.nullcontext())
+        self._admission.start()
+        self.addCleanup(self._admission.stop)
+
     def test_strict_approve_request(self):
         self.assertEqual(
             parse_operator_request(json.dumps(request()).encode()), request()
