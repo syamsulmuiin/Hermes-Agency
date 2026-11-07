@@ -128,12 +128,16 @@ def exercise():
                 print("socket_fence_eof_cleanup=PASS (not trusted lease IPC)", flush=True)
             finally:
                 parent.close()
-                stop_and_verify_unit(second)
+                # Stop only if the transient unit is still loaded/active.
+                # An already-collected unit may make a second stop fail.
+                if active(second):
+                    stop_and_verify_unit(second)
         finally:
             if child.is_alive():
                 child.kill()
             child.join(5)
-            stop_and_verify_unit(unit)
+            if active(unit):
+                stop_and_verify_unit(unit)
 
 
 def main(argv=None):
