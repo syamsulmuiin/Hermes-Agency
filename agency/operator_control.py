@@ -110,6 +110,12 @@ def operator_admission_lease(path="/run/hermes-admission/admission.lock"):
                     or current.st_nlink != 1):
                 raise PermissionError("Admission lock inode changed")
             yield
+            # Detect a replaced lock pathname even if replacement occurred
+            # while this admission was holding its original inode.
+            current = os.stat(path, follow_symlinks=False)
+            if (current.st_dev != info.st_dev or current.st_ino != info.st_ino
+                    or current.st_nlink != 1):
+                raise PermissionError("Admission lock inode changed during operation")
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)
     finally:
