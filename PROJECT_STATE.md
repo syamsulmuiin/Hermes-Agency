@@ -558,3 +558,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Existing `hermes-agency.service` remained **active** after acceptance. No production broker/operator units or keys were installed or provisioned by the test.
 - **Gate A is complete:** production-like isolated runtime acceptance. This is not final production unit equivalence, production provisioning validation, or activation approval.
 - **Next gate:** finalize production unit files and read-only review of installed code revision, runtime directory lifecycle, key and verifier provisioning, sandbox compatibility, backup/rollback, and explicit authorization boundaries. Do not install/enable/restart production services without a separate user approval.
+
+
+## Production checkout revision inspection (2026-11-07)
+- VPS operator pulled development branch at `3791ea759bdbc8c90fafc2fc822506614ace850d`; `git -C /opt/hermes-agency rev-parse HEAD` reported `not a git repository`. Production appears to be a file deployment without Git metadata; installed code revision is **unknown**, not assumed current.
+- Existing `hermes-agency.service` remained active. Next: compare SHA-256 of selected security-critical Python files in development versus installed production, without exposing contents or changing files. Do not infer overall tree equivalence from a small sample.
