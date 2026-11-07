@@ -36,7 +36,12 @@ def exercise():
     with tempfile.TemporaryDirectory(prefix="accept-", dir=base) as folder:
         os.chmod(folder, 0o711)
         journal = folder + "/owned.sqlite"
-        # SQLite rollback journal requires write access to the DB directory.\n        # Keep the root-owned ownership journal outside this trusted subdir.\n        trusted_dir = folder + "/trusted"\n        os.mkdir(trusted_dir, 0o700)\n        os.chown(trusted_dir, identity.pw_uid, identity.pw_gid)\n        database = trusted_dir + "/trusted.sqlite"
+        # SQLite rollback journal requires directory write access.
+        # The ownership journal remains in the root-owned parent.
+        trusted_dir = folder + "/trusted"
+        os.mkdir(trusted_dir, 0o700)
+        os.chown(trusted_dir, identity.pw_uid, identity.pw_gid)
+        database = trusted_dir + "/trusted.sqlite"
         key = secrets.token_bytes(32)
         now = time.time()
         claims = {
@@ -77,12 +82,11 @@ def exercise():
             print("BROKER_SIGKILL_WITH_INDEPENDENT_WATCHDOG_VERIFIED=NO", flush=True)
             print("PRODUCTION_INTEGRATION_VERIFIED=NO", flush=True)
         finally:
-            # Cleanup is best-effort; never suppress an unverified stop.
-            try:
+            # Only stop an actually active fixture unit; keep the original
+            # exception visible if the systemd job never started.
+            from .real_systemd_crash_acceptance import active
+            if active(unit):
                 stop_and_verify_unit(unit)
-            except PermissionError:
-                if os.path.exists(journal):
-                    raise
 
 
 def main(argv=None):
