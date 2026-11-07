@@ -154,25 +154,36 @@ def run():
             # SO_PEERCRED requires the dedicated nonroot UID. Fork and drop
             # privileges in a child; never weaken candidate peer checking.
             def request(grant):
+                # The peer must run as trusted UID; send only sanitized
+                # error class back to the root acceptance parent.
+                read_fd, write_fd = os.pipe()
                 pid = os.fork()
-                readfd, writefd = None, None
-                # Response delivered through a temporary trusted-readable file.
-                replyfile = folder + "/reply-" + secrets.token_hex(8)
                 if pid == 0:
+                    os.close(read_fd)
                     try:
                         os.setgroups([])
                         os.setgid(identity.pw_gid)
                         os.setuid(identity.pw_uid)
                         response = submit_signed_grant(sock, grant)
-                        os._exit(0 if response.get("exit_code") == 0 else 2)
-                    except BaseException:
+                        status = 0 if response.get("exit_code") == 0 else 2
+                        os.write(write_fd, ("reply=" + str(response.get("exit_code", "missing"))).encode()[:128])
+                        os._exit(status)
+                    except BaseException as exc:
+                        os.write(write_fd, ("error=" + type(exc).__name__).encode())
                         os._exit(3)
+                os.close(write_fd)
+                detail = os.read(read_fd, 256).decode("ascii", "replace")
+                os.close(read_fd)
                 _, status = os.waitpid(pid, 0)
-                return os.waitstatus_to_exitcode(status)
-            if request(g1) != 0:
-                raise AssertionError("Valid signed grant failed")
+                return os.waitstatus_to_exitcode(status), detail
+            first_status, first_detail = request(g1)
+            if first_status != 0:
+                diagnostics = ctl("status", broker_unit, "--no-pager", "-l")
+                print("CANDIDATE_FIRST_GRANT_DIAGNOSTIC=" + first_detail, flush=True)
+                print(diagnostics.stdout.decode("utf-8", "replace")[-4000:], flush=True)
+                raise AssertionError("Valid signed grant failed: " + first_detail)
             print("CANDIDATE_SIGNED_GRANT=PASS", flush=True)
-            if request(g1) == 0:
+            if request(g1)[0] == 0:
                 raise AssertionError("Consumed grant replay succeeded")
             print("CANDIDATE_REPLAY_DENIED=PASS", flush=True)
             pid = os.fork()
