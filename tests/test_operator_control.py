@@ -110,6 +110,31 @@ class OperatorControlTests(unittest.TestCase):
             "lease-token", "/broker/key", "/broker/sock",
         )
 
+    def test_persistent_freeze_denies_admission_before_approval(self):
+        boundary = Mock()
+        with patch("agency.operator_control.os.path.lexists", return_value=True):
+            with self.assertRaisesRegex(PermissionError, "frozen"):
+                dispatch_operator(
+                    boundary, request("approve_and_execute"),
+                    ("operator", b"s" * 16, b"v" * 32),
+                    "/broker/key", "/broker/sock",
+                )
+        boundary.approve_operator_request.assert_not_called()
+        boundary.execute_operator_approved_job.assert_not_called()
+
+    def test_freeze_still_denies_after_new_dispatch(self):
+        # A fresh invocation simulates a restarted sidecar: no process-local
+        # freeze flag is relied on, and the persistent marker is rechecked.
+        for _ in range(2):
+            boundary = Mock()
+            with patch("agency.operator_control.os.path.lexists", return_value=True):
+                with self.assertRaises(PermissionError):
+                    dispatch_operator(
+                        boundary, request(), ("operator", b"s" * 16, b"v" * 32),
+                        "/broker/key", "/broker/sock",
+                    )
+            boundary.approve_operator_request.assert_not_called()
+
     def test_wrong_secret_prevents_broker_attempt(self):
         boundary = Mock()
         boundary.approve_operator_request.side_effect = PermissionError("bad")
