@@ -55,7 +55,7 @@ class IsolatedOwnershipGateTests(unittest.TestCase):
     def test_pending_denied_and_record_unchanged(self):
         self._create()
         with sqlite3.connect(self.path) as db:
-            db.execute("INSERT INTO owned_units VALUES (?, ?)", ("hermes-fenced-test.service", "pending"))
+            db.execute("INSERT INTO owned_units VALUES (?, ?)", ("hermes-fenced-0123456789abcdef0123456789abcdef.service", "pending"))
         with self.assertRaises(PermissionError):
             gate.require_recovered(self.path)
         with sqlite3.connect(self.path) as db:
@@ -64,7 +64,7 @@ class IsolatedOwnershipGateTests(unittest.TestCase):
     def test_verified_record_allowed_and_retained(self):
         self._create()
         with sqlite3.connect(self.path) as db:
-            db.execute("INSERT INTO owned_units VALUES (?, ?)", ("hermes-fenced-test.service", "verified"))
+            db.execute("INSERT INTO owned_units VALUES (?, ?)", ("hermes-fenced-0123456789abcdef0123456789abcdef.service", "verified"))
         self.assertTrue(gate.require_recovered(self.path))
         with sqlite3.connect(self.path) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM owned_units").fetchone()[0], 1)
@@ -72,7 +72,7 @@ class IsolatedOwnershipGateTests(unittest.TestCase):
     def test_failed_recovery_keeps_pending_ownership(self):
         self._create()
         with sqlite3.connect(self.path) as db:
-            db.execute("INSERT INTO owned_units VALUES (?, ?)", ("hermes-fenced-test.service", "pending"))
+            db.execute("INSERT INTO owned_units VALUES (?, ?)", ("hermes-fenced-0123456789abcdef0123456789abcdef.service", "pending"))
         def failed_stop(unit):
             raise RuntimeError("simulated stop verification failure")
         with self.assertRaises(RuntimeError):
