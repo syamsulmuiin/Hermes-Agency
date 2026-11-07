@@ -33,7 +33,7 @@ if [ ! -e "/opt/hermes-fenced-$PIN" ]; then
 fi
 # Verify the exact pinned source bytes against git before using the snapshot.
 ```
-Instead of the illustrative last line, use the checksum validation below:
+Then verify the exact pinned snapshot against the archived commit and run isolated acceptance:
 ```bash
 PIN=912dce6aef6b
 TMP=$(mktemp -d /run/hermes-staging/pincheck.XXXXXX) || exit 1
