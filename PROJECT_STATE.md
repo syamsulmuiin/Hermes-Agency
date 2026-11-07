@@ -836,3 +836,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator pulled development/foundation to 245873c and ran seven unittest modules: fenced_systemd_supervisor, fence_process_supervisor, fenced_broker_ledger, trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants.
 - Result: 33 tests in 1.132s, OK, TEST_EXIT_CODE=0; 5 mocked systemd guard tests, 4 subprocess supervisor tests, 1 ledger test, 5 IPC, 5 fence, 6 broker socket and 7 grant tests. IPC test discovery no longer duplicated.
 - No real systemd unit was stopped or launched in this test. Systemd stop verification helper remains opt-in and unconnected to production broker. Crash recovery and real noop acceptance are still pending.
+
+
+## Opt-in broker-to-systemd fence supervision integration (2026-11-07)
+- Commits 419b699, f5a8b1e, f4a8991: execute_fenced_signed_grant accepts optional supervised_executor. The opt-in path derives a strict unique unit name from signed grant ID, passes the live fence socket to the runner, and calls stop_and_verify_unit on both success and failure. run_fenced_systemd_unit executes allowlisted fixed systemd-run with --unit, monitors fence EOF/unexpected data and 12s deadline, and fails closed. Default executor behavior unchanged; supervised_broker production listener is NOT wired.
+- Commit c22417c: added four mocked broker unit lifecycle tests for successful verified cleanup, disconnect cleanup, cleanup verification failure, and invalid job. NOT YET VERIFIED ON VPS.
+- Remaining production blocker: root broker abrupt crash cannot execute its own cleanup, so detached transient systemd units may survive. Need persistent independent systemd watchdog/recovery, race-free ownership and crash tests before real noop acceptance. No service restart or production DB modifications.
