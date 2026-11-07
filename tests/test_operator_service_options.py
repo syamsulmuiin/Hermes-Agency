@@ -72,6 +72,20 @@ class OperatorSidecarTests(unittest.TestCase):
             with self.assertRaises(PermissionError):
                 verify_private_broker_group("/broker/key", "worker")
 
+    def test_root_effective_signing_group_denied(self):
+        with (patch("agency.operator_service.os.geteuid", return_value=2001),
+              patch("agency.operator_service.os.getegid", return_value=0)):
+            with self.assertRaises(PermissionError):
+                verify_private_broker_group("/broker/key", "worker")
+
+    def test_root_worker_identity_denied(self):
+        worker = types.SimpleNamespace(pw_uid=0, pw_gid=0, pw_name="root")
+        with (patch("agency.operator_service.os.geteuid", return_value=2001),
+              patch("agency.operator_service.os.getegid", return_value=3001),
+              patch("agency.operator_service.pwd.getpwnam", return_value=worker)):
+            with self.assertRaises(PermissionError):
+                verify_private_broker_group("/broker/key", "root")
+
     def test_private_secret_never_read_as_root(self):
         with patch("agency.operator_service.os.geteuid", return_value=0):
             with self.assertRaises(PermissionError):
