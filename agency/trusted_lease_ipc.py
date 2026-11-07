@@ -51,7 +51,7 @@ def serve_fence_connection(conn, database, verification_key, *, root_uid=0, now=
         finish = json.loads(_read_line(conn))
         if finish != {"status": "done", "grant_id": claims["id"]}:
             raise PermissionError("Invalid lease IPC completion")
-        _send(conn, {"status": "released", "grant_id": claims["id"]})
+    _send(conn, {"status": "released", "grant_id": claims["id"]})
     return claims["id"]
 
 
