@@ -842,3 +842,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Commits 419b699, f5a8b1e, f4a8991: execute_fenced_signed_grant accepts optional supervised_executor. The opt-in path derives a strict unique unit name from signed grant ID, passes the live fence socket to the runner, and calls stop_and_verify_unit on both success and failure. run_fenced_systemd_unit executes allowlisted fixed systemd-run with --unit, monitors fence EOF/unexpected data and 12s deadline, and fails closed. Default executor behavior unchanged; supervised_broker production listener is NOT wired.
 - Commit c22417c: added four mocked broker unit lifecycle tests for successful verified cleanup, disconnect cleanup, cleanup verification failure, and invalid job. NOT YET VERIFIED ON VPS.
 - Remaining production blocker: root broker abrupt crash cannot execute its own cleanup, so detached transient systemd units may survive. Need persistent independent systemd watchdog/recovery, race-free ownership and crash tests before real noop acceptance. No service restart or production DB modifications.
+
+
+## Broker-to-systemd lifecycle suite verified on VPS (2026-11-07)
+- Operator pulled development/foundation to 499a4af and ran eight unittest modules (fenced_broker_unit_lifecycle, fenced_systemd_supervisor, fence_process_supervisor, fenced_broker_ledger, trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants).
+- Result: 37 tests in 1.084s, OK, TEST_EXIT_CODE=0. Counts: 4 broker-unit lifecycle, 5 mocked systemd guard, 4 subprocess supervisor, 1 ledger, 5 IPC, 5 lease fence, 6 broker socket, 7 signed grants.
+- These are unit/mocked and fake-executor tests, not a real systemd transient unit or forced root broker crash test. Broker abrupt-crash watchdog/recovery and production listener integration remain blocked. No production service changes or restarts.
