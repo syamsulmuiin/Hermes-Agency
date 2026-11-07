@@ -809,3 +809,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Result: 34 tests in 1.157s, OK, TEST_EXIT_CODE=0. New atomic ledger consumption, replay denial, and trusted lock during fake job passed.
 - Test-count caveat: BrokerFencedLedgerTests inherits TrustedLeaseIPCTests, so five inherited IPC test methods are discovered in both modules and counted twice. This is not 34 distinct scenarios.
 - No production listener wiring, crash supervisor, or real systemd noop acceptance. Production remains gated.
+
+
+## Duplicate-test cleanup and experimental fence-bound subprocess supervisor (2026-11-07)
+- Commit 8617798: BrokerFencedLedgerTests now subclasses unittest.TestCase and reuses fixture setup/teardown without inheriting five IPC test methods. Expected distinct count for previous 34-test command becomes 29, subject to verification.
+- Commit e49936d: added agency/fence_process_supervisor.py. Opt-in dedicated process-group subprocess runner watches trusted fence socket for EOF, rejects unexpected traffic, enforces deadline and kills/reaps its process group on failure. It is NOT wired to production systemd-run or broker.
+- Commit 385534b: added 4 isolated tests for success, disconnect, timeout and unexpected IPC traffic. NOT YET RUN on VPS.
+- SECURITY GATE: process-group termination does not terminate a detached systemd transient unit or independently reparented processes. Broker/sidecar crash safety requires systemd unit identity, stop/kill verification, and recovery semantics before real noop acceptance. No production restart or database changes.
