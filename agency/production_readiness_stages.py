@@ -42,7 +42,7 @@ def audit():
                 blockers.append(unit + ": no active main process")
                 continue
             exe = os.readlink("/proc/%d/exe" % pid)
-            cmdline = pathlib.Path("/proc/%d/cmdline" % pid).read_bytes().replace(b"\\0", b" ").decode("utf-8", "replace")
+            cmdline = pathlib.Path("/proc/%d/cmdline" % pid).read_bytes().replace(bytes([0]), b" ").decode("utf-8", "replace")
             evidence.append(unit + " PID=" + str(pid) + " EXE=" + exe)
             evidence.append(unit + " CMDLINE=" + cmdline[:400])
             evidence.append(unit + " FRAGMENT=" + state.get("FragmentPath", ""))
@@ -71,6 +71,25 @@ def audit():
             evidence.append("OWNERSHIP_RECOVERY_GATE=PASS")
         except (OSError, PermissionError, ValueError) as exc:
             blockers.append("Ownership recovery gate not attested: " + type(exc).__name__)
+    # Installed systemd wiring is evidence; source templates alone are insufficient.
+    for unit in ("hermes-fenced-broker-candidate.service",
+                 "hermes-fenced-recovery-candidate.service"):
+        try:
+            state = _show(unit, "LoadState", "FragmentPath", "ExecStart",
+                          "ExecStartPre", "ExecStopPost", "OnFailure")
+            evidence.append(unit + " LOAD=" + state.get("LoadState", "unknown")
+                            + " FRAGMENT=" + state.get("FragmentPath", ""))
+            if state.get("LoadState") != "loaded" or not state.get("FragmentPath"):
+                blockers.append(unit + ": candidate systemd unit not installed")
+            elif unit.endswith("broker-candidate.service"):
+                if ("fenced_startup_gate" not in state.get("ExecStartPre", "")
+                        or "fenced_owned_recovery" not in state.get("ExecStopPost", "")
+                        or "hermes-fenced-recovery-candidate.service" not in state.get("OnFailure", "")):
+                    blockers.append("Installed candidate broker recovery wiring incomplete")
+            elif "fenced_owned_recovery" not in state.get("ExecStart", ""):
+                blockers.append("Installed recovery unit lacks owned recovery entrypoint")
+        except (OSError, PermissionError, subprocess.TimeoutExpired) as exc:
+            blockers.append(unit + ": installed systemd wiring not verifiable (" + type(exc).__name__ + ")")
     # These are live behavioral properties; filesystem inspection cannot prove them.
     blockers.extend((
         "Live sidecar admission-lock participation not behaviorally attested",
