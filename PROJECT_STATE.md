@@ -1564,3 +1564,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Three production services `hermes-agency.service`, `hermes-signed-broker.service`, and `hermes-operator-sidecar.service` remained **active**.
 - The static manifest audit prints `EFFECTIVE_SYSTEMD_RUNTIME_TESTED=NO` and `TRUSTED_OPERATOR_E2E_TESTED=NO` because those markers refer to static manifest audit only; the separate isolated acceptance test verifies the staging runtime and operator E2E. Production effective runtime integration is **not** verified.
 - Production integration plan: `docs/FENCED_PRODUCTION_INTEGRATION_PREPARATION.md`. **NO-GO for production cutover** pending read-only compatibility checks of existing ledger/journal/database, exclusive broker transition, backup/rollback rehearsal and explicit authorization.
+
+## Production state read-only audit (2026-11-07)
+- VPS ran `python3 -m agency.production_state_readonly_audit` at `ce95bd1`; source ledger and trusted DB SQLite online backups PASS, quick_check `ok`, production ownership journal absent, ledger tables `approvals,audit`, `signed_grant_consumptions` absent, legacy approvals consumed/unconsumed both 0.
+- On copies only: journal bootstrap PASS, pending/verified/rollback PASS, ledger replay-history preservation check PASS, `COPY_REHEARSAL=PASS`. No actual systemd cutover tested.
+- `PRODUCTION_CUTOVER_STATE_GATE=NO_GO`, `STATE_AUDIT_EXIT_CODE=2` expected fail-closed. Three production services remained active.
+- Still required: safe, authorized bootstrap/migration plan; full ledger replay semantics and pending grants audit; exclusive writer handover; recovery and rollback rehearsal with copied state. Do not create production journal or switch broker without explicit approval.
