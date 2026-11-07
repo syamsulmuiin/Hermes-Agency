@@ -778,3 +778,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## IPC long-job timeout fix (2026-11-07)
 - Commit 6b65237 changes experimental trusted_lease_ipc handshake timeout to no socket timeout once the lease is locked, preventing an arbitrary 10-second timeout from releasing the fence while an allowed job is still running.
 - Not yet regression-tested on VPS; no production deployment or restart. This does not solve broker/sidecar crash safety, root broker ledger integration, or actual systemd noop acceptance. In particular, a crash after job start may release trusted lock while the systemd job continues; do not deploy before a bounded job-lifetime supervisor and fail-closed crash tests.
+
+
+## Post-timeout-patch regression (2026-11-07)
+- Operator pulled branch development/foundation to 2c06c40 on VPS and ran 4 unittest modules: trusted_lease_ipc, trusted_lease_fence, trusted_broker_socket, broker_grants.
+- Result: Ran 21 tests in 0.598s, OK, TEST_EXIT_CODE=0 (3 IPC, 5 fence, 6 broker socket, 7 grants). No production service changes reported.
+- Important limitation: these tests do NOT exercise a job lasting >10 seconds; timeout fix has no direct long-running regression test yet. IPC remains experimental and unconnected to production broker/ledger. Crash safety and real noop acceptance remain pending.
