@@ -1154,3 +1154,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added `tests/test_fenced_staging_concurrency.py` (threaded cooperative journal lock ordering) and `tests/test_fenced_direct_bypass_inventory.py` (read-only proof operator direct systemd execution still exists, nonroot denial). These new tests are NOT YET VALIDATED on VPS.
 - Critical remaining implementation: real launcher session using a fixture grant and trusted peer, independently supervised systemd recovery triggered by broker death, actual concurrent process launch/recovery and verified direct-bypass closure. Existing direct operator diagnostic behavior was deliberately not changed without a safe migration.
 - No production configuration, database, grants or service changed.
+
+
+## VPS isolated staging acceptance validated (2026-11-07)
+- Operator reported at commit `cc6ac3c`: `STATIC_EXIT=0`, `UNIT_EXIT=0`, `ACCEPTANCE_EXIT=0`, `PRODUCTION_SERVICE_EXIT=0`, production service active.
+- The aggregate acceptance runner validates existing isolated real crash scenarios, NOT the new launcher as one system with independent watchdog. No evidence yet of new-launcher broker SIGKILL, concurrent launch/recovery at process level, or closed direct systemd bypass.
+- Preserve staging-only deployment boundary. Next implement and test true end-to-end launcher with independent systemd watchdog/recovery and fail-closed bypass enforcement before proposing production integration.
