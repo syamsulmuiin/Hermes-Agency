@@ -1462,3 +1462,8 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 ## VPS trusted route unit test results (2026-11-07)
 - Operator pulled `4508173`: four `tests.test_fenced_trusted_route` cases PASS; full discovery 308 tests OK (skipped=1), exit 0, both production services active. CLI argparse error output during suite is expected negative-path stderr, not a suite failure.
 - This validates only non-root fixed-endpoint routing seam via mocked delegation, NOT real approval issuance, broker submission, active production ingress, or cutover. The isolated systemd broker/recovery acceptance previously passed separately. Continue trusted operator ingress and end-to-end staging integration before any production mutation.
+
+## Final production manifest fail-closed audit prepared (2026-11-07)
+- Added read-only `agency.fenced_final_manifest_audit` (`49dea42`) to check pinned WorkingDirectory, root identities, sandbox, recovery ordering, startup/stop gates, writable socket/journal/trusted SQLite paths, and isolated candidate socket. Returns exit 2 and explicit blockers on mismatch; does not install or modify systemd.
+- Existing candidate manifest is known to FAIL because both units target stale `/opt/hermes-agency` rather than pinned `/opt/hermes-fenced-377abe8b948b`, and broker `ReadWritePaths` omits `/var/lib/hermes-agency` required for trusted SQLite lease/WAL under strict sandbox. Do not install as-is.
+- Full operator-authentication -> real approval -> real signed grant -> broker fenced -> recovery integration is NOT yet implemented/tested; previous staging acceptance used synthetic approved-grant fixture. Production cutover NO-GO; both live services untouched.
