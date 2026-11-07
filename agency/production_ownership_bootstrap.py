@@ -5,7 +5,7 @@ after BOTH broker instances are confirmed stopped and admission frozen.
 """
 import argparse
 import os
-import sqlite3
+import stat
 import subprocess
 
 from .fenced_unit_journal import _connect, _verify_store
@@ -19,14 +19,17 @@ def _inactive(unit):
         ["/usr/bin/systemctl", "is-active", unit],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         timeout=5, check=False)
-    return result.stdout.strip() in (b"inactive", b"failed")
+    return result.returncode in (0, 3) and result.stdout.strip() in (b"inactive", b"failed")
 
 
 def bootstrap():
     if os.geteuid() != 0:
         raise PermissionError("Root required")
-    if not os.path.isfile("/run/hermes-operator/admission.freeze"):
-        raise PermissionError("Admission freeze marker missing")
+    freeze = "/run/hermes-operator/admission.freeze"
+    info = os.lstat(freeze)
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
+            or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
+        raise PermissionError("Unsafe admission freeze marker")
     for unit in ("hermes-signed-broker.service",
                  "hermes-fenced-broker-candidate.service"):
         if not _inactive(unit):
