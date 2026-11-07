@@ -4,10 +4,12 @@ No systemd changes. Invoke only during an authorized maintenance window
 after BOTH broker instances are confirmed stopped and admission frozen.
 """
 import argparse
+import contextlib
 import os
 import stat
 import subprocess
 
+from .production_admission_drain import exclusive_admission_drain
 from .fenced_unit_journal import _connect, _verify_store
 from .fenced_startup_gate import require_recovered
 
@@ -35,9 +37,11 @@ def _inactive(unit):
             and fields.get("Job") in ("", "0"))
 
 
-def bootstrap():
+def bootstrap(*, admission_drained=False):
     if os.geteuid() != 0:
         raise PermissionError("Root required")
+    if not admission_drained:
+        raise PermissionError("Exclusive admission drain required")
     freeze = "/run/hermes-operator/admission.freeze"
     info = os.lstat(freeze)
     if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
@@ -69,7 +73,8 @@ def main():
     args = parser.parse_args()
     if not args.broker_stopped:
         raise PermissionError("Explicit stopped broker assertion required")
-    bootstrap()
+    with exclusive_admission_drain(timeout=30):
+        bootstrap(admission_drained=True)
 
 
 if __name__ == "__main__":
