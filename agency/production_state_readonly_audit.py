@@ -131,6 +131,13 @@ def main():
         os.chmod(tmp, 0o700)
         paths = []
         for label, original in (("ledger", args.ledger), ("journal", args.journal), ("trusted", args.trusted)):
+            if label == "journal" and not os.path.exists(original):
+                dest = os.path.join(tmp, label + ".sqlite")
+                with sqlite3.connect(dest):
+                    pass
+                print("OWNERSHIP_JOURNAL_SOURCE=ABSENT")
+                paths.append(dest)
+                continue
             dest = os.path.join(tmp, label + ".sqlite")
             snapshot(original, dest)
             print("SQLITE_ONLINE_BACKUP_" + label.upper() + "=PASS")
