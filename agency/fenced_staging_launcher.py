@@ -33,7 +33,7 @@ def _peer_child(peer, control, broker, root_control, database, key, uid, gid):
 
 
 def run_staging_session(grant, key, journal, database, *, trusted_uid,
-                        trusted_gid, runner=None):
+                        trusted_gid, runner=None, ledger=None):
     """Start a non-root trusted peer and concurrent root stop controller.
 
     Root controller runs in a thread because it must serve stop requests
@@ -75,7 +75,7 @@ def run_staging_session(grant, key, journal, database, *, trusted_uid,
         controller.start()
         try:
             result = staging_broker_job(
-                broker, grant, key, journal, runner=runner)
+                broker, grant, key, journal, runner=runner, ledger=ledger)
         finally:
             broker.close()
             controller.join(15)
