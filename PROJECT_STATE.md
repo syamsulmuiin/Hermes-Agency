@@ -1166,3 +1166,10 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Added `agency/real_staging_launcher_acceptance_test.py --execute`: root-only, real-systemd opt-in fixture in `/run/hermes-staging/accept-*`, synthetic signed grant, SQLite lease provenance, non-root trusted peer, new `run_staging_session` with allowlisted `noop`, verified unit shutdown and journal gate.
 - This smoke does NOT inject broker SIGKILL or demonstrate independent systemd watchdog recovery; its PASS markers are only for normal execution. Requires VPS validation and likely integration debugging.
 - Important remaining work: dedicated watchdog-managed broker process with OnFailure independent recovery and a real active-unit SIGKILL test; recovery startup gate concurrency across processes; close direct operator systemd bypass. Do not claim user-requested end-to-end crash acceptance complete yet.
+
+
+## Real staging launcher smoke failure and minimal fix (2026-11-07)
+- VPS at `6198934`: `STATIC_EXIT=0`, `UNIT_EXIT=0`, `LAUNCHER_EXIT=1`, `PRODUCTION_SERVICE_EXIT=0`; production active. Traceback: `PermissionError: Existing ownership journal required` at `staging_journal_lock`, before systemd job execution.
+- Root cause: new isolated acceptance fixture did not bootstrap its ownership journal before invoking the fail-closed launcher lock.
+- Minimal patch `af72030`: fixture calls existing `fenced_unit_journal._connect(journal)` to initialize its isolated root-owned journal before launch. The journal-required security check remains unchanged. Patch NOT YET VPS-VALIDATED.
+- No broker SIGKILL/watchdog integration validated. Production unchanged.
