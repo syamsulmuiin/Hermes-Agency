@@ -46,7 +46,7 @@ def signed(key, job):
                   task=secrets.token_hex(16), worker="staging-worker",
                   lease_generation=1, job=job,
                   params_hash=fingerprint({"job": job}),
-                  iat=now, exp=now+120)
+                  iat=now, exp=now+60)
     return claims, {"claims": claims, "signature": hmac.new(
         key, _canonical(claims), hashlib.sha256).hexdigest()}
 
