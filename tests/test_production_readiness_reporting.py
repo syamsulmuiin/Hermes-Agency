@@ -60,6 +60,36 @@ class ReadinessReportTests(unittest.TestCase):
         self.assertIn("Sidecar runtime identity not independently attested",
                       output.getvalue())
 
+    def test_snapshot_manifest_pass_is_observed_not_authorized(self):
+        with patch.object(stages, "_show", side_effect=PermissionError("isolated")), \
+             patch.object(stages, "_regular", return_value=False), \
+             patch.object(stages.pathlib.Path, "is_dir", return_value=True), \
+             patch.object(stages.pathlib.Path, "is_symlink", return_value=False), \
+             patch("agency.fenced_snapshot_acceptance_preflight.audit", return_value=0), \
+             patch("agency.production_runtime_evidence.capture",
+                   side_effect=PermissionError("isolated")):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = stages.audit()
+        self.assertEqual(result, 2)
+        self.assertIn("CANDIDATE_CONTENT_MANIFEST=PASS", output.getvalue())
+        self.assertIn("STAGE1_RESULT=NO_GO", output.getvalue())
+
+    def test_snapshot_manifest_failure_stays_blocked(self):
+        with patch.object(stages, "_show", side_effect=PermissionError("isolated")), \
+             patch.object(stages, "_regular", return_value=False), \
+             patch.object(stages.pathlib.Path, "is_dir", return_value=True), \
+             patch.object(stages.pathlib.Path, "is_symlink", return_value=False), \
+             patch("agency.fenced_snapshot_acceptance_preflight.audit", return_value=2), \
+             patch("agency.production_runtime_evidence.capture",
+                   side_effect=PermissionError("isolated")):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = stages.audit()
+        self.assertEqual(result, 2)
+        self.assertIn("Candidate content digest and deployment manifest not attested",
+                      output.getvalue())
+
     def test_stage2_remains_plan_only(self):
         output = io.StringIO()
         with redirect_stdout(output):
