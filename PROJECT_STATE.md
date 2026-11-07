@@ -1015,3 +1015,9 @@ Read PROJECT_STATE.md, inspect the current branch and commits, run tests, preser
 - Operator ran `python3 -m agency.real_trusted_lease_ipc_test --execute`: `trusted_sqlite_lock_held_during_job=PASS`, `trusted_lock_held_until_stop_verified=PASS`, `trusted_uid_ipc_systemd_stop_before_unlock=PASS`, `TRUSTED_IPC_EXIT_CODE=0`.
 - Proven scope: trusted non-root sidecar with private SQLite writer lock, broker socket EOF, cooperative root supervisor stop/verify of isolated real systemd unit, and SQLite lock availability only after verification. Test-only synthetic grant, no production approval or production service changes.
 - Remaining blockers: sidecar SIGKILL, supervisor SIGKILL, cleanup failure, independent watchdog and startup gating on failed cleanup. Do not claim crash-complete or production readiness.
+
+
+## Four-case independent systemd recovery matrix added (2026-11-07)
+- New opt-in `python3 -m agency.real_crash_containment_matrix_test --execute` at commit 1b19b4c. Four isolated scenarios use random systemd watched/recovery services, private root-owned journal, and real transient sleep units: `sidecar_sigkill`, `supervisor_sigkill`, `cleanup_failure`, `restart_gate`.
+- IMPORTANT SCOPE: the two SIGKILL labels represent separate simulations of a systemd-watched process failure, NOT actual non-root trusted sidecar or actual independent root supervisor death. This harness validates systemd OnFailure recovery and journal gating in four contexts, but does NOT establish the stronger requested end-to-end crash containment of the real IPC architecture. The separate trusted IPC normal EOF acceptance already passed.
+- VPS execution and py_compile are still pending. Need replace simulated cases with actual trusted sidecar and root supervisor systemd units, enforce independent watchdog and durable startup serialization, and verify real failure paths before any production activation. No production changes.
