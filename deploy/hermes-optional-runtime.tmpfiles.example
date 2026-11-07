@@ -1,0 +1,4 @@
+# Opt-in broker and operator socket directories; install only with explicit approval.
+# Private trusted primary group is hermes-trusted; NEVER use shared hermes-agents.
+d /run/hermes-broker 0710 root hermes-trusted -
+d /run/hermes-operator 0700 hermes-trusted hermes-trusted -
