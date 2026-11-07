@@ -11,13 +11,13 @@ import sys
 
 SCENARIOS = (
     ("candidate_framing", (sys.executable, "-m", "unittest",
-      "tests.test_fenced_candidate_framing", "-q"), ("OK",)),
+      "discover", "-s", "tests", "-p", "test_fenced_candidate_framing.py", "-q"), ("OK",)),
     ("candidate_socket", (sys.executable, "-m", "unittest",
-      "tests.test_fenced_candidate_socket", "-q"), ("OK",)),
+      "discover", "-s", "tests", "-p", "test_fenced_candidate_socket.py", "-q"), ("OK",)),
     ("candidate_broker", (sys.executable, "-m", "unittest",
-      "tests.test_fenced_broker_candidate", "-q"), ("OK",)),
+      "discover", "-s", "tests", "-p", "test_fenced_broker_candidate.py", "-q"), ("OK",)),
     ("candidate_recovery", (sys.executable, "-m", "unittest",
-      "tests.test_fenced_owned_recovery", "-q"), ("OK",)),
+      "discover", "-s", "tests", "-p", "test_fenced_owned_recovery.py", "-q"), ("OK",)),
     ("candidate_preflight", (sys.executable, "-m",
       "agency.fenced_candidate_preflight"), ("FENCED_CANDIDATE_STATIC_PREFLIGHT=PASS",)),
     ("all_unit_tests", (sys.executable, "-m", "unittest", "discover",
