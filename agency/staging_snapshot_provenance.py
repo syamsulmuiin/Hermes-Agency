@@ -57,7 +57,7 @@ def audit(snapshot, repo, commit, *, git=_git):
         wanted_mode, oid = expected[relative]
         if mode != wanted_mode:
             raise PermissionError("Snapshot file mode mismatch")
-        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
         if blob != oid:
             raise PermissionError("Snapshot file hash mismatch")
     actual = set(files)
