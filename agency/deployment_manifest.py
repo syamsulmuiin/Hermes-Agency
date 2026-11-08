@@ -17,7 +17,7 @@ _UNIT = re.compile(r"^[a-zA-Z0-9_.@-]{1,128}[.]service$")
 
 
 def _path(value):
-    if not isinstance(value, str) or not value.startswith("/") or "\\x00" in value:
+    if not isinstance(value, str) or not value.startswith("/") or chr(0) in value:
         raise ValueError("Path must be absolute")
     p = Path(value)
     if ".." in p.parts or str(p) != value or value == "/":
