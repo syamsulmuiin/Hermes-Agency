@@ -60,6 +60,7 @@ def exercise():
         raise PermissionError("Non-root staging identity required")
     with tempfile.TemporaryDirectory(prefix="hermes-operator-e2e-") as temp:
         root=Path(temp)
+        root.chmod(0o711)
         # Socket parent must be 0700 and owned by listener identity.
         directory=root/"socket"
         directory.mkdir(mode=0o700)
@@ -69,7 +70,7 @@ def exercise():
         lock.touch(mode=0o640)
         lock.chmod(0o640)
         freeze=root/"admission.freeze"
-        marker=root/"boundary-attempt"
+        marker=directory/"boundary-attempt"
         child=subprocess.Popen(
             [sys.executable,"-u","-c",CHILD,str(sock),str(lock),str(freeze),str(root),str(marker)],
             stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,
