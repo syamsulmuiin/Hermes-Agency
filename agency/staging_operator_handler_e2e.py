@@ -67,6 +67,7 @@ def exercise():
         source = Path(__file__).resolve().parent
         package = root / "agency"
         package.mkdir(mode=0o755)
+        package.chmod(0o755)  # mkdir permissions are restricted by umask.
         for name in ("__init__.py", "operator_control.py", "trusted_peer.py",
                      "trusted_local_service.py", "trusted_protocol.py"):
             shutil.copyfile(source / name, package / name)
