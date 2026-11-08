@@ -13,7 +13,7 @@ FIELDS = ("snapshot", "admission_lock", "freeze_marker", "operator_socket")
 UNITS = ("agency", "broker", "sidecar", "candidate_broker", "candidate_recovery")
 IDENTITIES = ("trusted_user", "trusted_group", "worker_user")
 _NAME = re.compile(r"^[a-z_][a-z0-9_-]{0,63}$")
-_UNIT = re.compile(r"^[a-zA-Z0-9_.@-]{1,128}\\.service$")
+_UNIT = re.compile(r"^[a-zA-Z0-9_.@-]{1,128}[.]service$")
 
 
 def _path(value):
