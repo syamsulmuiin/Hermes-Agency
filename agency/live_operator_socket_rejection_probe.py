@@ -6,11 +6,12 @@ admission, approval, or broker execution; it cannot attest lock participation.
 import argparse
 import json
 import os
+import pwd
 import socket
 import stat
 import sys
 
-from .production_runtime_evidence import capture, LOCK, FREEZE
+from .production_runtime_evidence import capture, FREEZE
 
 SOCKET = "/run/hermes-operator/operator.sock"
 
@@ -18,11 +19,9 @@ SOCKET = "/run/hermes-operator/operator.sock"
 def probe(socket_path=SOCKET):
     before = capture()
     path = os.lstat(socket_path)
-    if not stat.S_ISSOCK(path.st_mode) or path.st_uid != os.getuid() and path.st_uid != 0:
-        # Socket may be owned by hermes-trusted; verify identity separately.
-        import pwd
-        if path.st_uid != pwd.getpwnam("hermes-trusted").pw_uid:
-            raise PermissionError("Unexpected operator socket owner")
+    if (not stat.S_ISSOCK(path.st_mode)
+            or path.st_uid != pwd.getpwnam("hermes-trusted").pw_uid):
+        raise PermissionError("Unexpected operator socket owner")
     if stat.S_IMODE(path.st_mode) != 0o600:
         raise PermissionError("Unexpected operator socket mode")
     if not FREEZE.exists():
@@ -46,7 +45,7 @@ def probe(socket_path=SOCKET):
     if (before["sidecar_pid"], before["lock_device"], before["lock_inode"]) != (
         after["sidecar_pid"], after["lock_device"], after["lock_inode"]):
         raise PermissionError("Runtime or lock identity changed")
-    if not FREEZE.exists() or not os.path.samefile(LOCK, LOCK):
+    if not FREEZE.exists():
         raise PermissionError("Runtime state changed")
     return {"socket_rejection": "PASS", "runtime_identity": "PASS",
             "lock_inode_stability": "PASS",
