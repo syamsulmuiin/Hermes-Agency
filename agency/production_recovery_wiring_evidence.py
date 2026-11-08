@@ -7,15 +7,17 @@ import argparse
 import subprocess
 import sys
 
+from .deployment_manifest import resolve
+
 BROKER = "hermes-fenced-broker-candidate.service"
 RECOVERY = "hermes-fenced-recovery-candidate.service"
 SNAPSHOT = "/opt/hermes-fenced-9bf261261b59"
 
 
-def _show(unit):
+def _show(unit, systemctl="/usr/bin/systemctl"):
     keys = ("LoadState", "WorkingDirectory", "User", "ExecStart",
             "ExecStartPre", "ExecStopPost", "OnFailure", "Requires", "After")
-    result = subprocess.run(["/usr/bin/systemctl", "show", unit,
+    result = subprocess.run([systemctl, "show", unit,
                              *("--property=" + key for key in keys)],
                             capture_output=True, text=True, timeout=10,
                             check=True)
@@ -23,16 +25,31 @@ def _show(unit):
                 if "=" in line)
 
 
-def inspect():
-    broker, recovery = _show(BROKER), _show(RECOVERY)
+def inspect(manifest=None, resolver=resolve, show=None):
+    """Check installed recovery wiring using a verified per-host manifest."""
+    if manifest is None:
+        broker_unit, recovery_unit, snapshot = BROKER, RECOVERY, SNAPSHOT
+        systemctl = "/usr/bin/systemctl"
+    else:
+        resolved = resolver(manifest)
+        if (not resolved.get("identity_resolved")
+                or resolved.get("cutover_authorized") is not False
+                or resolved.get("sandbox_authorized") is not False):
+            raise PermissionError("Unsafe runtime resolution")
+        broker_unit = resolved["units"]["candidate_broker"]
+        recovery_unit = resolved["units"]["candidate_recovery"]
+        snapshot = resolved["paths"]["snapshot"]
+        systemctl = resolved["systemctl"]
+    read_state = show or (lambda unit: _show(unit, systemctl=systemctl))
+    broker, recovery = read_state(broker_unit), read_state(recovery_unit)
     for item in (broker, recovery):
         if (item.get("LoadState") != "loaded"
-                or item.get("WorkingDirectory") != SNAPSHOT
+                or item.get("WorkingDirectory") != snapshot
                 or item.get("User") != "root"):
             raise PermissionError("Candidate recovery identity mismatch")
-    if (RECOVERY not in broker.get("OnFailure", "")
-            or RECOVERY not in broker.get("Requires", "")
-            or RECOVERY not in broker.get("After", "")
+    if (recovery_unit not in broker.get("OnFailure", "")
+            or recovery_unit not in broker.get("Requires", "")
+            or recovery_unit not in broker.get("After", "")
             or "fenced_startup_gate" not in broker.get("ExecStartPre", "")
             or "fenced_owned_recovery" not in broker.get("ExecStopPost", "")
             or "fenced_owned_recovery" not in recovery.get("ExecStart", "")):
