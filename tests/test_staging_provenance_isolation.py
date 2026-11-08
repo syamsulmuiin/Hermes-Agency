@@ -31,6 +31,21 @@ class ProvenanceTests(unittest.TestCase):
                 with self.assertRaises(PermissionError):
                     audit(path, path, commit, git=git)
 
+    def test_extra_empty_directory_denied(self):
+        data = b"ok"
+        oid = hashlib.sha1(b"blob 2\\0" + data).hexdigest()
+        commit = "c" * 40
+        def git(repo, *args):
+            if args[0] == "rev-parse":
+                return (commit + "\\n").encode()
+            return b"100644 blob " + oid.encode() + b"\\tfile.txt\\0"
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "file.txt").write_bytes(data)
+            (root / "unexpected").mkdir()
+            with self.assertRaises(PermissionError):
+                audit(root, root, commit, git=git)
+
     def test_invalid_commit_denied(self):
         with self.assertRaises(ValueError):
             audit("/none", "/none", "main")
