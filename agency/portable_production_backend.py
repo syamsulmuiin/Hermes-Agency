@@ -5,8 +5,9 @@ A reviewed integration must supply every callable and a validated deployment
 manifest. No staging adapter or fake fallback is accepted.
 """
 from contextlib import contextmanager
-from dataclasses import dataclass
-import os
+from dataclasses import dataclass, replace
+
+from .production_admission_bindings import ProductionAdmissionBindings
 
 from .deployment_manifest import validate, resolve
 from .production_maintenance_adapter import MaintenanceDenied
@@ -43,6 +44,20 @@ class HostOperations:
     quarantine: object
     quarantine_verified: object
     replay_ledger_identity: object
+
+
+def bind_existing_admission(operations, admission=None):
+    """Use real operator-compatible flock for drain and inode checks.
+
+    Remaining host operations must still be explicitly supplied and reviewed.
+    """
+    if not isinstance(operations, HostOperations):
+        raise MaintenanceDenied("Host operations required")
+    binding = admission if admission is not None else ProductionAdmissionBindings()
+    if not isinstance(binding, ProductionAdmissionBindings):
+        raise MaintenanceDenied("Production admission binding required")
+    return replace(operations, exclusive_drain=binding.exclusive_drain,
+                   lock_identity=binding.lock_identity)
 
 
 class PortableProductionBackend:
