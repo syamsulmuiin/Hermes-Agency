@@ -4,6 +4,7 @@ Requires root to create the root-owned admission lock and connect as the
 authorized local peer. The listener drops privileges to nobody.
 """
 import argparse
+import hashlib
 import fcntl
 import json
 import os
@@ -13,6 +14,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import shutil
 import time
 
 from .operator_control import serve_operator_forever
@@ -61,6 +63,15 @@ def exercise():
     with tempfile.TemporaryDirectory(prefix="hermes-operator-e2e-") as temp:
         root=Path(temp)
         root.chmod(0o711)
+        # Copy only required Python source into an accessible isolated package.
+        # The trusted listener cannot traverse /root/Hermes-Agency.
+        source = Path(__file__).resolve().parent
+        package = root / "agency"
+        package.mkdir(mode=0o755)
+        for name in ("__init__.py", "operator_control.py", "trusted_peer.py",
+                     "trusted_local_service.py", "trusted_protocol.py"):
+            shutil.copyfile(source / name, package / name)
+            (package / name).chmod(0o644)
         # Socket parent must be 0700 and owned by listener identity.
         directory=root/"socket"
         directory.mkdir(mode=0o700)
@@ -75,10 +86,16 @@ def exercise():
         child=subprocess.Popen(
             [sys.executable,"-u","-c",CHILD,str(sock),str(lock),str(freeze),str(root),str(marker)],
             stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,
+            cwd=str(root),
+            env={**os.environ, "PYTHONPATH":str(root)},
             preexec_fn=lambda:(os.setgroups([]),os.setgid(identity.pw_gid),
                                os.setuid(identity.pw_uid)))
         try:
-            wait_socket(sock,child)
+            try:
+                wait_socket(sock,child)
+            except (AssertionError, TimeoutError) as exc:
+                detail = child.stderr.read(1500).decode("utf-8", "replace") if child.poll() is not None else ""
+                raise AssertionError("Staging listener startup: " + detail[-1000:]) from exc
             fd=os.open(lock,os.O_RDONLY|os.O_NOFOLLOW)
             try:
                 fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -121,6 +138,7 @@ def main(argv=None):
     except (OSError,ValueError,PermissionError,AssertionError,TimeoutError) as exc:
         print("STAGING_OPERATOR_E2E=FAIL")
         print("ERROR="+type(exc).__name__)
+        print("DETAIL="+str(exc)[:1000])
         print("PRODUCTION_CUTOVER_GO=NO")
         return 2
     print(json.dumps(result,sort_keys=True))
