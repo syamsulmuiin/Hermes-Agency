@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, replace
 
 from .production_admission_bindings import ProductionAdmissionBindings
+from .production_existing_evidence import ExistingProductionEvidence
 
 from .deployment_manifest import validate, resolve
 from .production_maintenance_adapter import MaintenanceDenied
@@ -58,6 +59,24 @@ def bind_existing_admission(operations, admission=None):
         raise MaintenanceDenied("Production admission binding required")
     return replace(operations, exclusive_drain=binding.exclusive_drain,
                    lock_identity=binding.lock_identity)
+
+
+def bind_existing_evidence(operations, evidence):
+    """Bind existing read-only checks; retain explicit mutating host callbacks.
+
+    This does not authorize production cutover or provision a journal.
+    Runtime evidence is observational and is not a substitute for a
+    behavioral admission attestation.
+    """
+    if not isinstance(operations, HostOperations):
+        raise MaintenanceDenied("Host operations required")
+    if not isinstance(evidence, ExistingProductionEvidence):
+        raise MaintenanceDenied("Existing production evidence required")
+
+    def freeze_verified(resolved):
+        return evidence.freeze_verified(resolved)
+
+    return replace(operations, freeze_verified=freeze_verified)
 
 
 class PortableProductionBackend:
