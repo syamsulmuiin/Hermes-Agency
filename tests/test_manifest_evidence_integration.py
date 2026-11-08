@@ -64,7 +64,7 @@ class ManifestEvidenceIntegrationTests(unittest.TestCase):
             with patch("agency.production_runtime_evidence.os.readlink",
                        return_value=str(snapshot)), patch(
                        "agency.production_runtime_evidence.Path.read_bytes",
-                       return_value=b"python\\0-m\\0agency.operator_service\\0"):
+                       return_value=bytes([112,121,116,104,111,110,0,45,109,0]) + b"agency.operator_service" + bytes([0])):
                 result = capture(data, resolver=resolved, show=show)
             self.assertEqual(result["runtime_identity"], "PASS")
             self.assertFalse(result["cutover_authorized"])
