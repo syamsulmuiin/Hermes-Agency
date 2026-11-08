@@ -1,0 +1,21 @@
+{
+  "schema": "hermes-deployment-v1",
+  "paths": {
+    "snapshot": "/opt/hermes-fenced-9bf261261b59",
+    "admission_lock": "/run/hermes-admission/admission.lock",
+    "freeze_marker": "/run/hermes-operator/admission.freeze",
+    "operator_socket": "/run/hermes-operator/operator.sock"
+  },
+  "units": {
+    "agency": "hermes-agency.service",
+    "broker": "hermes-signed-broker.service",
+    "sidecar": "hermes-operator-sidecar.service",
+    "candidate_broker": "hermes-fenced-broker-candidate.service",
+    "candidate_recovery": "hermes-fenced-recovery-candidate.service"
+  },
+  "identities": {
+    "trusted_user": "hermes-trusted",
+    "trusted_group": "hermes-agents",
+    "worker_user": "hermes-worker"
+  }
+}
