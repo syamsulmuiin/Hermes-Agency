@@ -11,14 +11,16 @@ import stat
 import subprocess
 import sys
 
+from .deployment_manifest import resolve
+
 SNAPSHOT = Path("/opt/hermes-fenced-9bf261261b59")
 LOCK = Path("/run/hermes-admission/admission.lock")
 FREEZE = Path("/run/hermes-operator/admission.freeze")
 SIDECAR = "hermes-operator-sidecar.service"
 
 
-def _show(unit, *properties):
-    cmd = ["/usr/bin/systemctl", "show", unit]
+def _show(unit, *properties, systemctl="/usr/bin/systemctl"):
+    cmd = [systemctl, "show", unit]
     cmd.extend("--property=" + key for key in properties)
     result = subprocess.run(cmd, capture_output=True, text=True,
                             timeout=10, check=True)
@@ -26,38 +28,55 @@ def _show(unit, *properties):
                 if "=" in line)
 
 
-def capture():
-    """Return bounded non-secret runtime observations; fail closed."""
-    state = _show(SIDECAR, "ActiveState", "MainPID", "WorkingDirectory",
-                  "Environment", "User", "Group")
+def capture(manifest=None, resolver=resolve, show=None):
+    """Observe the live sidecar; optional manifest cannot authorize cutover."""
+    if manifest is None:
+        snapshot, lock, freeze, sidecar = SNAPSHOT, LOCK, FREEZE, SIDECAR
+        trusted_user = "hermes-trusted"
+        systemctl = "/usr/bin/systemctl"
+    else:
+        resolved = resolver(manifest)
+        if (not resolved.get("identity_resolved")
+                or resolved.get("cutover_authorized") is not False
+                or resolved.get("sandbox_authorized") is not False):
+            raise PermissionError("Unsafe runtime resolution")
+        snapshot = Path(resolved["paths"]["snapshot"])
+        lock = Path(resolved["paths"]["admission_lock"])
+        freeze = Path(resolved["paths"]["freeze_marker"])
+        sidecar = resolved["units"]["sidecar"]
+        trusted_user = manifest["identities"]["trusted_user"]
+        systemctl = resolved["systemctl"]
+    read_state = show or (lambda unit, *keys: _show(unit, *keys, systemctl=systemctl))
+    state = read_state(sidecar, "ActiveState", "MainPID", "WorkingDirectory",
+                       "Environment", "User", "Group")
     pid = int(state.get("MainPID", "0"))
     if state.get("ActiveState") != "active" or pid <= 1:
         raise PermissionError("Sidecar is not active")
-    if state.get("User") != "hermes-trusted":
+    if state.get("User") != trusted_user:
         raise PermissionError("Unexpected sidecar user")
-    if state.get("WorkingDirectory") != str(SNAPSHOT):
+    if state.get("WorkingDirectory") != str(snapshot):
         raise PermissionError("Sidecar working directory mismatch")
-    if "PYTHONPATH=" + str(SNAPSHOT) not in state.get("Environment", "").split():
+    if "PYTHONPATH=" + str(snapshot) not in state.get("Environment", "").split():
         raise PermissionError("Sidecar Python path mismatch")
-    if SNAPSHOT.is_symlink() or not SNAPSHOT.is_dir():
+    if snapshot.is_symlink() or not snapshot.is_dir():
         raise PermissionError("Snapshot missing or linked")
     cwd = os.readlink("/proc/%d/cwd" % pid)
-    if cwd != str(SNAPSHOT):
+    if cwd != str(snapshot):
         raise PermissionError("Running sidecar snapshot mismatch")
     cmdline = Path("/proc/%d/cmdline" % pid).read_bytes().split(b"\0")
     if b"agency.operator_service" not in cmdline:
         raise PermissionError("Unexpected sidecar entrypoint")
-    if not FREEZE.exists() or FREEZE.is_symlink():
+    if not freeze.exists() or freeze.is_symlink():
         raise PermissionError("Production freeze missing")
-    info = LOCK.lstat()
+    info = lock.lstat()
     if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
             or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) != 0o640):
         raise PermissionError("Admission lock insecure")
     # Detect inode replacement during capture.
-    again = LOCK.lstat()
+    again = lock.lstat()
     if (info.st_dev, info.st_ino) != (again.st_dev, again.st_ino):
         raise PermissionError("Admission lock changed during capture")
-    return {"sidecar_pid": pid, "snapshot": str(SNAPSHOT),
+    return {"sidecar_pid": pid, "snapshot": str(snapshot),
             "lock_device": info.st_dev, "lock_inode": info.st_ino,
             "freeze_present": True, "runtime_identity": "PASS",
             "admission_behavior": "NOT_ATTESTED",
