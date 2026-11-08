@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
 
 from agency.staging_snapshot_provenance import audit
 from agency.staging_isolation_evidence import inspect
@@ -23,22 +22,14 @@ class ProvenanceTests(unittest.TestCase):
             path = Path(temp)
             file = path / "file.txt"
             file.write_bytes(data)
-            with patch("agency.staging_snapshot_provenance.os.walk",
-                       wraps=os.walk):
-                with patch("agency.staging_snapshot_provenance.Path.lstat",
-                           wraps=None) if False else patch(
-                               "agency.staging_snapshot_provenance.os.geteuid",
-                               return_value=0, create=True):
-                    # Test environments may not run as root: root ownership
-                    # remains enforced by the real auditor.
-                    if path.stat().st_uid == 0:
-                        self.assertTrue(audit(path, path, commit, git=git)["tree_content_matches"])
-                        file.write_bytes(b"tampered")
-                        with self.assertRaises(PermissionError):
-                            audit(path, path, commit, git=git)
-                    else:
-                        with self.assertRaises(PermissionError):
-                            audit(path, path, commit, git=git)
+            if path.stat().st_uid == 0:
+                self.assertTrue(audit(path, path, commit, git=git)["tree_content_matches"])
+                file.write_bytes(b"tampered")
+                with self.assertRaises(PermissionError):
+                    audit(path, path, commit, git=git)
+            else:
+                with self.assertRaises(PermissionError):
+                    audit(path, path, commit, git=git)
 
     def test_invalid_commit_denied(self):
         with self.assertRaises(ValueError):
