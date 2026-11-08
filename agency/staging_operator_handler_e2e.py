@@ -83,13 +83,32 @@ def exercise():
         os.chown(lock,0,identity.pw_gid)
         freeze=root/"admission.freeze"
         marker=directory/"boundary-attempt"
+        # Verify import visibility under the exact dropped UID before binding.
+        def drop_identity():
+            os.setgroups([])
+            os.setgid(identity.pw_gid)
+            os.setuid(identity.pw_uid)
+        environment = {**os.environ, "PYTHONPATH": str(root)}
+        preflight = subprocess.run(
+            [sys.executable, "-B", "-c",
+             "import os,sys,importlib.util; "
+             "print('uid='+str(os.geteuid())); "
+             "print('path='+repr(sys.path)); "
+             "print('root_access='+str(os.access(sys.argv[1],os.X_OK))); "
+             "print('package_access='+str(os.access(sys.argv[2],os.R_OK|os.X_OK))); "
+             "print('spec='+str(importlib.util.find_spec('agency')))",
+             str(root), str(package)],
+            cwd=str(root), env=environment, preexec_fn=drop_identity,
+            capture_output=True, text=True, timeout=5)
+        if preflight.returncode or "spec=None" in preflight.stdout:
+            raise AssertionError("Staging import preflight: "
+                                 + (preflight.stdout + preflight.stderr)[-1200:])
         child=subprocess.Popen(
             [sys.executable,"-u","-c",CHILD,str(sock),str(lock),str(freeze),str(root),str(marker)],
             stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,
             cwd=str(root),
-            env={**os.environ, "PYTHONPATH":str(root)},
-            preexec_fn=lambda:(os.setgroups([]),os.setgid(identity.pw_gid),
-                               os.setuid(identity.pw_uid)))
+            env=environment,
+            preexec_fn=drop_identity)
         try:
             try:
                 wait_socket(sock,child)
