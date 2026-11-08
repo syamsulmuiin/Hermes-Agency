@@ -8,7 +8,10 @@ _FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC",
 
 def inventory(root):
     """Return (files with bytes and modes, directories), fail closed on links."""
-    fd = os.open(root, _FLAGS)
+    try:
+        fd = os.open(root, _FLAGS)
+    except (NotADirectoryError, IsADirectoryError, OSError) as exc:
+        raise PermissionError("Untrusted snapshot root") from exc
     files, directories = {}, set()
     try:
         def walk(directory_fd, prefix):
