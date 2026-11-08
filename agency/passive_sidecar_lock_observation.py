@@ -20,7 +20,9 @@ def matching_locks(lines, pid, device, inode):
             continue
         try:
             lock_pid = int(fields[4])
-            major, minor, number = (int(v, 16) for v in fields[5].split(":"))
+            major_hex, minor_hex, inode_dec = fields[5].split(":")
+            major, minor, number = (int(major_hex, 16), int(minor_hex, 16),
+                                    int(inode_dec, 10))
         except (ValueError, IndexError):
             continue
         if lock_pid == pid and (major, minor, number) == expected:
