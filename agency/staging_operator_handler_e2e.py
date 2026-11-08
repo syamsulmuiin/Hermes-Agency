@@ -4,7 +4,6 @@ Requires root to create the root-owned admission lock and connect as the
 authorized local peer. The listener drops privileges to nobody.
 """
 import argparse
-import hashlib
 import fcntl
 import json
 import os
