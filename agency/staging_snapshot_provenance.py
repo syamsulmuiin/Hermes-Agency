@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import re
 import stat
+
+from .staging_snapshot_fd import inventory
 import subprocess
 
 _SHA = re.compile(r"[0-9a-f]{40}")
@@ -43,50 +45,22 @@ def audit(snapshot, repo, commit, *, git=_git):
                           parts[2].decode("ascii"))
     if not expected:
         raise PermissionError("Empty pinned Git tree")
-    root = Path(snapshot)
-    root_stat = root.lstat()
-    if (not stat.S_ISDIR(root_stat.st_mode) or root_stat.st_uid != 0
-            or root_stat.st_mode & 0o022):
-        raise PermissionError("Untrusted snapshot root")
-    actual = set()
+    files, directories = inventory(snapshot)
     expected_dirs = set()
     for relative in expected:
         parts = Path(relative).parts[:-1]
         for i in range(1, len(parts) + 1):
             expected_dirs.add(Path(*parts[:i]).as_posix())
-    actual_dirs = set()
-    for directory, dirs, files in os.walk(root, followlinks=False):
-        for name in dirs + files:
-            path = Path(directory) / name
-            info = path.lstat()
-            if (info.st_uid != 0 or info.st_mode & 0o022
-                    or stat.S_ISLNK(info.st_mode)):
-                raise PermissionError("Untrusted snapshot entry")
-            if name in dirs:
-                if not stat.S_ISDIR(info.st_mode):
-                    raise PermissionError("Invalid directory")
-                relative_dir = path.relative_to(root).as_posix()
-                if relative_dir not in expected_dirs:
-                    raise PermissionError("Unexpected snapshot directory")
-                actual_dirs.add(relative_dir)
-                continue
-            relative = path.relative_to(root).as_posix()
-            if relative not in expected or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-                raise PermissionError("Unexpected snapshot file")
-            mode, oid = expected[relative]
-            if stat.S_IMODE(info.st_mode) != mode:
-                raise PermissionError("Snapshot file mode mismatch")
-            with path.open("rb") as stream:
-                data = stream.read()
-                pinned = os.fstat(stream.fileno())
-                if (pinned.st_dev, pinned.st_ino) != (info.st_dev, info.st_ino):
-                    raise PermissionError("Snapshot file changed")
-            blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
-            if blob != oid:
-                raise PermissionError("Snapshot file hash mismatch")
-            actual.add(relative)
-    if actual != set(expected) or actual_dirs != expected_dirs:
+    if set(files) != set(expected) or directories != expected_dirs:
         raise PermissionError("Snapshot inventory mismatch")
+    for relative, (mode, data) in files.items():
+        wanted_mode, oid = expected[relative]
+        if mode != wanted_mode:
+            raise PermissionError("Snapshot file mode mismatch")
+        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+        if blob != oid:
+            raise PermissionError("Snapshot file hash mismatch")
+    actual = set(files)
     return {"commit": commit, "file_count": len(actual),
             "tree_content_matches": True, "production_mutated": False,
             "execute_authorized": False}
