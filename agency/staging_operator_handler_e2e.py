@@ -61,7 +61,7 @@ def exercise():
         raise PermissionError("Non-root staging identity required")
     with tempfile.TemporaryDirectory(prefix="hermes-operator-e2e-") as temp:
         root=Path(temp)
-        root.chmod(0o711)
+        root.chmod(0o755)
         # Copy only required Python source into an accessible isolated package.
         # The trusted listener cannot traverse /root/Hermes-Agency.
         source = Path(__file__).resolve().parent
