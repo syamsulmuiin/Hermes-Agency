@@ -33,12 +33,12 @@ class ProvenanceTests(unittest.TestCase):
 
     def test_extra_empty_directory_denied(self):
         data = b"ok"
-        oid = hashlib.sha1(b"blob 2\\0" + data).hexdigest()
+        oid = hashlib.sha1(b"blob 2\0" + data).hexdigest()
         commit = "c" * 40
         def git(repo, *args):
             if args[0] == "rev-parse":
-                return (commit + "\\n").encode()
-            return b"100644 blob " + oid.encode() + b"\\tfile.txt\\0"
+                return (commit + "\n").encode()
+            return b"100644 blob " + oid.encode() + b"\tfile.txt\0"
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "file.txt").write_bytes(data)
