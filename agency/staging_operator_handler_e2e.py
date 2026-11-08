@@ -69,6 +69,7 @@ def exercise():
         lock=root/"admission.lock"
         lock.touch(mode=0o640)
         lock.chmod(0o640)
+        os.chown(lock,0,identity.pw_gid)
         freeze=root/"admission.freeze"
         marker=directory/"boundary-attempt"
         child=subprocess.Popen(
