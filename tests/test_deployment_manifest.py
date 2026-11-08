@@ -1,7 +1,11 @@
 import copy
+import json
+import os
+import tempfile
+from pathlib import Path
 import unittest
 from unittest.mock import patch, Mock
-from agency.deployment_manifest import validate, resolve
+from agency.deployment_manifest import validate, resolve, load, _trusted_systemctl
 
 BASE = {
     "schema": "hermes-deployment-v1",
@@ -44,6 +48,45 @@ class DeploymentManifestTests(unittest.TestCase):
         data["units"]["broker"] = "broker;restart.service"
         with self.assertRaises(ValueError):
             validate(data)
+
+    def test_manifest_file_symlink_denied(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "source.json"
+            source.write_text(json.dumps(BASE))
+            link = Path(temp) / "link.json"
+            link.symlink_to(source)
+            with patch("agency.deployment_manifest._trusted_chain"):
+                with self.assertRaises(OSError):
+                    load(str(link))
+
+    def test_manifest_file_group_writable_denied(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "manifest.json"
+            source.write_text(json.dumps(BASE))
+            source.chmod(0o664)
+            with patch("agency.deployment_manifest._trusted_chain"):
+                with self.assertRaises(PermissionError):
+                    load(str(source))
+
+    def test_manifest_file_inode_pinned(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "manifest.json"
+            source.write_text(json.dumps(BASE))
+            source.chmod(0o600)
+            with patch("agency.deployment_manifest._trusted_chain"):
+                if os.geteuid() == 0:
+                    self.assertEqual(load(str(source))["schema"], "hermes-deployment-v1")
+                else:
+                    with self.assertRaises(PermissionError):
+                        load(str(source))
+
+    def test_untrusted_systemctl_denied(self):
+        with tempfile.TemporaryDirectory() as temp:
+            executable = Path(temp) / "systemctl"
+            executable.write_text("#!/bin/sh\\n")
+            executable.chmod(0o777)
+            with self.assertRaises(PermissionError):
+                _trusted_systemctl(str(executable))
 
     @patch("agency.deployment_manifest.grp.getgrnam")
     @patch("agency.deployment_manifest.pwd.getpwnam")
