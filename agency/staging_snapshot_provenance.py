@@ -49,7 +49,7 @@ def audit(snapshot, repo, commit, *, git=_git):
             or root_stat.st_mode & 0o022):
         raise PermissionError("Untrusted snapshot root")
     actual = set()
-    for directory, dirs, files in os.walk(root, followlinks=False):
+    expected_dirs = set()\n    for relative in expected:\n        parts = Path(relative).parts[:-1]\n        for i in range(1, len(parts) + 1):\n            expected_dirs.add(Path(*parts[:i]).as_posix())\n    actual_dirs = set()\n    for directory, dirs, files in os.walk(root, followlinks=False):
         for name in dirs + files:
             path = Path(directory) / name
             info = path.lstat()
@@ -59,7 +59,8 @@ def audit(snapshot, repo, commit, *, git=_git):
             if name in dirs:
                 if not stat.S_ISDIR(info.st_mode):
                     raise PermissionError("Invalid directory")
-                continue
+                relative_dir = path.relative_to(root).as_posix()
+                if relative_dir not in expected_dirs:\n                    raise PermissionError("Unexpected snapshot directory")\n                actual_dirs.add(relative_dir)\n                continue
             relative = path.relative_to(root).as_posix()
             if relative not in expected or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                 raise PermissionError("Unexpected snapshot file")
@@ -75,8 +76,7 @@ def audit(snapshot, repo, commit, *, git=_git):
             if blob != oid:
                 raise PermissionError("Snapshot file hash mismatch")
             actual.add(relative)
-    if actual != set(expected):
-        raise PermissionError("Snapshot inventory mismatch")
+    if actual != set(expected) or actual_dirs != expected_dirs:\n        raise PermissionError("Snapshot inventory mismatch")
     return {"commit": commit, "file_count": len(actual),
             "tree_content_matches": True, "production_mutated": False,
             "execute_authorized": False}
