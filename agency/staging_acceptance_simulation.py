@@ -15,7 +15,7 @@ def simulate(checks):
         try:
             callback = checks[phase]
             ok = callback()
-        except (KeyError, Exception) as exc:
+        except Exception as exc:
             results.append({"phase": phase, "result": "DENIED",
                             "reason": type(exc).__name__})
             break
