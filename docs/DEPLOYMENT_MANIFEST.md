@@ -13,3 +13,25 @@ Integration into existing production evidence gates is intentionally deferred
 until cross-host fixture tests establish compatibility. Existing production
 paths and pinned snapshot verification remain unchanged and fail-closed.
 Runtime discovery is not proof of lock behavior, recovery, or safe cutover.
+
+## Trusted manifest loading (read-only)
+
+`load(path)` requires an absolute canonical path, root-owned non-writable
+ancestor directories without symlinks, and a root-owned regular manifest
+with a single hard link, no group/other write permissions, and a 16 KiB
+size limit. It opens with `O_NOFOLLOW`, reads through a pinned descriptor,
+and rejects inode replacement observed during the read. This is a
+fail-closed configuration check, not a cutover authorization.
+
+`resolve(manifest)` verifies that the resolved `systemctl` executable
+and its directory chain are root-controlled and not group/other writable
+before querying systemd. Resolution never starts or modifies services.
+
+These checks do not establish an immutable deployment or eliminate every
+possible privileged concurrent filesystem race. Only root-controlled
+deployment locations should be used; do not load a manifest from `/tmp`
+or another writable ancestor. No production gate opts into this manifest
+automatically.
+
+Run `python3 -m unittest tests.test_deployment_manifest
+tests.test_manifest_evidence_integration tests.test_portable_host_capabilities -v`.
